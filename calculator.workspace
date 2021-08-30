@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeLite_Workspace Name="calculator" Database="" Version="10000">
+  <Project Name="calculator" Path="calculator.project" Active="No"/>
+  <Project Name="nogui" Path="nogui.project" Active="Yes"/>
+  <BuildMatrix>
+    <WorkspaceConfiguration Name="Debug" Selected="yes">
+      <Environment/>
+      <Project Name="calculator" ConfigName="Debug"/>
+      <Project Name="nogui" ConfigName="Debug"/>
+    </WorkspaceConfiguration>
+    <WorkspaceConfiguration Name="Release" Selected="yes">
+      <Environment/>
+      <Project Name="calculator" ConfigName="Release"/>
+      <Project Name="nogui" ConfigName="Release"/>
+    </WorkspaceConfiguration>
+  </BuildMatrix>
+</CodeLite_Workspace>

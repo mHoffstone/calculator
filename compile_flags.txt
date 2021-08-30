@@ -1,0 +1,11 @@
+-IC:\msys64\mingw64\include\c++\9.3.0
+-IC:\msys64\mingw64\include\c++\9.3.0\x86_64-w64-mingw32
+-IC:\msys64\mingw64\include\c++\9.3.0\backward
+-IC:\msys64\mingw64\lib\gcc\x86_64-w64-mingw32\9.3.0\include
+-IC:\msys64\mingw64\include
+-IC:\msys64\mingw64\lib\gcc\x86_64-w64-mingw32\9.3.0\include-fixed
+-IC:\msys64\mingw64\x86_64-w64-mingw32\include
+-IH:\Documents\c++\calculator
+-IH:\Documents\c++\calculator\include
+-target
+x86_64-pc-windows-gnu
