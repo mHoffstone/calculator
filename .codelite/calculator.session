@@ -5,22 +5,32 @@
   <TabInfoArray Name="TabInfoArray">
     <TabInfo>
       <wxString Value="H:\Documents\c++\calculator\src\nogui.cpp" Name="FileName"/>
-      <int Value="0" Name="FirstVisibleLine"/>
-      <int Value="13" Name="CurrentLine"/>
+      <int Value="1" Name="FirstVisibleLine"/>
+      <int Value="15" Name="CurrentLine"/>
       <wxArrayString Name="Bookmarks"/>
       <IntVector Name="CollapsedFolds"/>
     </TabInfo>
     <TabInfo>
       <wxString Value="H:\Documents\c++\calculator\src\expression.h" Name="FileName"/>
-      <int Value="0" Name="FirstVisibleLine"/>
-      <int Value="72" Name="CurrentLine"/>
+      <int Value="49" Name="FirstVisibleLine"/>
+      <int Value="24" Name="CurrentLine"/>
       <wxArrayString Name="Bookmarks"/>
       <IntVector Name="CollapsedFolds"/>
     </TabInfo>
     <TabInfo>
       <wxString Value="H:\Documents\c++\calculator\src\expression.cpp" Name="FileName"/>
-      <int Value="137" Name="FirstVisibleLine"/>
-      <int Value="160" Name="CurrentLine"/>
+      <int Value="191" Name="FirstVisibleLine"/>
+      <int Value="281" Name="CurrentLine"/>
+      <wxArrayString Name="Bookmarks"/>
+      <IntVector Name="CollapsedFolds">
+        <IntVectorItem Value="90"/>
+        <IntVectorItem Value="119"/>
+      </IntVector>
+    </TabInfo>
+    <TabInfo>
+      <wxString Value="C:\msys64\mingw64\include\c++\9.3.0\bits\stl_vector.h" Name="FileName"/>
+      <int Value="1048" Name="FirstVisibleLine"/>
+      <int Value="1060" Name="CurrentLine"/>
       <wxArrayString Name="Bookmarks"/>
       <IntVector Name="CollapsedFolds"/>
     </TabInfo>

@@ -9,9 +9,15 @@ int main(){
 	std::string input;
 	std::getline(std::cin, input);
 	
-	Expression* e = getExpression(input);
+	try{
+		Expression* e = getExpression(input);
+		std::cout << e->getValue() << std::endl;
+	}
+	catch(std::exception& err){
+		std::cout << "Exception:" << std::endl;
+		std::cout << err.what() << std::endl;
+	}
 	
-	std::cout << e->hasValue() << std::endl << e->getValue() << std::endl;
 	
 	/*Variable v1;
 	v1.m_hasValue = true;

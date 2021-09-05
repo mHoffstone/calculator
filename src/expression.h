@@ -4,19 +4,28 @@
 #include <string>
 #include <array>
 
+enum ExpressionType{
+	ET_NONE, ET_VARIABLE, ET_OPERATION
+};
+
+enum OperationType{
+	OP_NONE, OP_ADD, OP_SUB, OP_MUL, OP_DIV
+};
+
 class Expression{
 	public:
-		Expression();
+		Expression(int t);
 		virtual ~Expression();
 		
-		virtual double getValue(){return m_value;}
-		virtual bool hasValue(){return m_hasValue;}
+		virtual double getValue();
+		virtual bool hasValue();
 		
-		virtual void evaluate() = 0;
+		virtual void evaluate(){};
 		
 	public:
 		bool m_hasValue;
 		double m_value;
+		int type;
 };
 
 class Variable : public Expression{
@@ -24,18 +33,17 @@ class Variable : public Expression{
 		Variable();
 		virtual ~Variable();
 		
-		virtual void evaluate() override{}
-		
 		std::string name;
 };
 
 template <int opcount>
 class Operation : public Expression{
 	public:
-		Operation();
+		Operation(int t);
 		virtual ~Operation();
 		
 		std::array<Expression*, opcount> operands;
+		int opType;
 };
 
 class Addition : public Operation<2>{
