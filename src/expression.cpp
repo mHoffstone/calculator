@@ -2,7 +2,12 @@
 
 #include <iostream>
 #include <vector>
-#include <stdexcept>
+#include <functional>
+
+std::map<std::string, Expression*> Expression::variables;
+std::map<std::string, std::pair<Expression*, FunctionArgument*>> Expression::functions;
+
+enum Type{T_NONE, T_NUMBER, T_OPERATOR, T_BRACKET, T_VARFUNC, T_VARIABLE, T_FUNCTION};
 
 Expression::Expression(int t){
 	type = t;
@@ -10,29 +15,86 @@ Expression::Expression(int t){
 Expression::~Expression(){
 	//dtor
 }
-double Expression::getValue(){
-	if(!hasValue()) throw std::runtime_error("Expression has no value!");
-	return m_value;
+numtype Expression::getValue(){
+	if(!hasValue()) throw expression_exception("Expression has no value!");
+	return value;
 }
 bool Expression::hasValue(){
-	return m_hasValue;
+	return bValue;
 }
 
 Variable::Variable() : Expression(ET_VARIABLE){
 	//ctor
 }
+Variable::Variable(std::string name) : Expression(ET_VARIABLE), name(name){
+	
+}
 Variable::~Variable(){
 	//dtor
+}
+void Variable::evaluate(){
+	if(Expression::variables.find(name) != Expression::variables.end()){
+		Expression* e = Expression::variables[name];
+		e->evaluate();
+		bValue = e->hasValue();
+		value = e->getValue();
+	}
+	else throw expression_exception(name + " has no assigned value!");
+}
+std::string Variable::toString(){
+	return name;
+}
+
+Constant::Constant() : Expression(ET_CONSTANT){
+	
+}
+Constant::Constant(numtype value) : Expression(ET_CONSTANT){
+	bValue = true;
+	this->value = value;
+}
+Constant::~Constant(){
+	
+}
+std::string Constant::toString(){
+	return std::to_string(value);
 }
 
 template <int opcount>
 Operation<opcount>::Operation(int t) : Expression(ET_OPERATION){
 	opType = t;
+	operands[0] = nullptr;
+	operands[1] = nullptr;
 }
 template <int opcount>
 Operation<opcount>::~Operation(){
 	delete operands[0];
 	delete operands[1];
+}
+template <int opcount>
+std::string Operation<opcount>::toString(){
+	std::string s;
+	switch(opType){
+		case OP_ADD:
+			s = "+";
+			break;
+		case OP_SUB:
+			s = "-";
+			break;
+		case OP_MUL:
+			s = "*";
+			break;
+		case OP_DIV:
+			s = "/";
+			break;
+		case OP_ASSIGN:
+			s = "=";
+			break;
+		default:
+			s = "@";
+			break;
+	}
+	if(operands[0] == nullptr || operands[1] == nullptr) return s;
+	else return std::string("(") + operands[0]->toString() + std::string(")") + s + std::string("(") + operands[1]->toString() + std::string(")");
 }
 
 Addition::Addition() : Operation<2>(OP_ADD){
@@ -44,9 +106,9 @@ Addition::~Addition(){
 void Addition::evaluate(){
 	operands[0]->evaluate();
 	operands[1]->evaluate();
-	m_hasValue = operands[0]->hasValue() && operands[1]->hasValue();
-	if(m_hasValue){
-		m_value = operands[0]->getValue() + operands[1]->getValue();
+	bValue = operands[0]->hasValue() && operands[1]->hasValue();
+	if(bValue){
+		value = operands[0]->getValue() + operands[1]->getValue();
 	}
 }
 
@@ -59,9 +121,9 @@ Subtraction::~Subtraction(){
 void Subtraction::evaluate(){
 	operands[0]->evaluate();
 	operands[1]->evaluate();
-	m_hasValue = operands[0]->hasValue() && operands[1]->hasValue();
-	if(m_hasValue){
-		m_value = operands[0]->getValue() - operands[1]->getValue();
+	bValue = operands[0]->hasValue() && operands[1]->hasValue();
+	if(bValue){
+		value = operands[0]->getValue() - operands[1]->getValue();
 	}
 }
 
@@ -74,9 +136,9 @@ Multiplication::~Multiplication(){
 void Multiplication::evaluate(){
 	operands[0]->evaluate();
 	operands[1]->evaluate();
-	m_hasValue = operands[0]->hasValue() && operands[1]->hasValue();
-	if(m_hasValue){
-		m_value = operands[0]->getValue() * operands[1]->getValue();
+	bValue = operands[0]->hasValue() && operands[1]->hasValue();
+	if(bValue){
+		value = operands[0]->getValue() * operands[1]->getValue();
 	}
 }
 
@@ -89,117 +151,90 @@ Division::~Division(){
 void Division::evaluate(){
 	operands[0]->evaluate();
 	operands[1]->evaluate();
-	m_hasValue = operands[0]->hasValue() && operands[1]->hasValue();
-	if(m_hasValue){
-		m_value = operands[0]->getValue() / operands[1]->getValue();
+	bValue = operands[0]->hasValue() && operands[1]->hasValue();
+	if(bValue){
+		value = operands[0]->getValue() / operands[1]->getValue();
 	}
 }
 
-#if 0
-void trim(std::string& str){
-	while(str.find("  ") != std::string::npos){
-		int pos = str.find("  ");
-		str = str.replace(str.begin()+pos, str.begin()+pos+2, 1, ' ');
-	}
-	bool lastWasSpace = false;
-	bool lastWasOperator = false;
-	for(int i = 0; i < (int)str.length(); i++){
-		char c = str[i];
-		if(lastWasOperator){
-			if(str[i] != ' '){
-				str.insert(str.begin()+i, ' ');
-				i++;
-			}
-			lastWasOperator = false;
+Assign::Assign() : Operation<2>(OP_ASSIGN){
+	//ctor
+}
+Assign::~Assign(){
+	//dtor
+}
+void Assign::replaceVariable(Expression** e, FunctionArgument* fa, const std::string& argName){
+	if((*e)->getType() == ET_VARIABLE){
+		Variable* v = ((Variable*)*e);
+		if(v->getName() == argName){
+			delete v;
+			*e = fa;
 		}
-		else if(c == '+' || c == '-' || c == '*' || c == '/'){
-			if(!lastWasSpace){
-				str.insert(str.begin()+i, ' ');
-				i++;
-			}
-			lastWasOperator = true;
-		}
-		lastWasSpace = str[i] == ' ';
 	}
-	if(str[0] == ' ') str = str.substr(1);
-	if(str[str.length()-1] != ' ') str += ' ';
+	
+	if((*e)->getType() == ET_OPERATION){
+		Operation<2>* o = ((Operation<2>*)*e);
+		replaceVariable(&o->operands[0], fa, argName);
+		replaceVariable(&o->operands[1], fa, argName);
+	}
+}
+void Assign::evaluate(){
+	if(operands[0]->getType() == ET_VARIABLE){
+		auto it = Expression::variables.find(((Variable*)operands[0])->name);
+		if(it == Expression::variables.end()){
+			Expression::variables[((Variable*)operands[0])->name] = operands[1];
+		}
+		else throw expression_exception(((Variable*)operands[0])->name + " already has value");
+		
+	}
+	else if(operands[0]->getType() == ET_FUNCTION){
+		Function* f = ((Function*)operands[0]);
+		std::string argName;
+		if(f->arg->getType() == ET_VARIABLE){
+			argName = ((Variable*)f->arg)->getName();
+			delete f->arg;
+			f->arg = nullptr;
+			FunctionArgument* fa = new FunctionArgument;
+			
+			replaceVariable(&operands[1], fa, argName);
+			
+			auto it = Expression::functions.find(f->name);
+			if(it == Expression::functions.end()){
+				Expression::functions[f->name] = std::pair<Expression*, FunctionArgument*>(operands[1], fa);
+			}
+			else throw expression_exception(f->name + " already has value");
+		}
+		/*if(f->arg->getType() == ET_FUNCTION_ARGUMENT){
+			
+		}*/
+		else throw expression_exception("Function argument must be a variable");
+	}
+	else throw expression_exception(std::string("Cannot assign expression ") + operands[0]->toString());
 }
 
-static Expression* evalVec(std::vector<std::string>& parts, int start){
-	//std::vector<Operation<2>*> operations;
+Function::Function(std::string name) : Expression(ET_FUNCTION), name(name){
 	
-	int skip = 1;
-	
-	Expression* e = nullptr;
-	Operation<2>* op = nullptr;
-	Expression* ePrev = nullptr;
-	for(int i = 0; i < (int)parts.size(); i += skip){
-		skip = 1;
-		std::cout << '\"' << parts[i] << '\"' << std::endl;
-		if(i % 2 == 0){
-			Expression* v;
-			if(parts[i][0] == '('){
-				v = getExpression(parts[i].substr(1, parts[i].length()-2));
-			}
-			else{
-				v = new Variable;
-				v->m_hasValue = true;
-				v->m_value = std::stod(parts[i]);
-			}
-			
-			if(i == 0){
-				ePrev = v;
-				if(parts.size() == 1){
-					e = v;
-				}
-			}
-			else{
-				op->operands[0] = ePrev;
-				op->operands[1] = v;
-				ePrev = op;
-			}
-		}
-		else{
-			int c = parts[i];
-			
-			// Priority rules
-			if(c == '+' || c == '-'){
-				if(i+2 < (int)parts.size()){
-					if(parts[i+2] == '*' || parts[i+2] == '/'){
-						skip = 3;
-						evalVec(parts, i+1);
-						continue;
-					}
-				}
-			}
-			
-			/*
-			if(c == "+"){
-				op = new Addition;
-			}
-			else if(c == "-"){
-				op = new Subtraction;
-			}
-			else if(c == "*"){
-				op = new Multiplication;
-			}
-			else if(c == "/"){
-				op = new Division;
-			}
-			*/
-			e = op;
-			//operations.push_back(op);
-		}
-	}
-	
-	/*for(int i = 0; i < (int)operations.size(); i++){
-		operations[i]->evaluate();
-	}*/
-	e->evaluate();
-	
-	return e;
 }
-#endif
+Function::~Function(){
+	
+}
+void Function::evaluate(){
+	auto f = Expression::functions.find(name);
+	
+	if(f != Expression::functions.end()){
+		f->second.second->e = arg;
+		f->second.first->evaluate();
+		bValue = f->second.first->hasValue();
+		value = f->second.first->getValue();
+	}
+	else throw expression_exception(name + " is not defined");
+}
+void Function::setArgument(Expression* arg){
+	this->arg = arg;
+}
+std::string Function::toString(){
+	return name + std::string("(") + arg->toString() + std::string(")");
+}
 
 bool isNumber(const std::string& str){
 	bool hasDecimal = false;
@@ -214,135 +249,193 @@ bool isNumber(const std::string& str){
 	}
 	return true;
 }
+
+int getPriority(Expression* o){
+	if(o->getType() != ET_OPERATION) return -1;
+	switch(((Operation<2>*)o)->getOperationType()){
+		case OP_ASSIGN:
+			return 0;
+		case OP_ADD:
+		case OP_SUB:
+			return 1;
+		case OP_MUL:
+		case OP_DIV:
+			return 2;
+	}
+	return -1;
+}
 int getPriority(const std::string& str){
-	if(str == "+" || str == "-") return 0;
-	if(str == "*" || str == "/") return 1;
-	if(str == "^") return 2;
+	if(str == "=") return 0;
+	if(str == "+" || str == "-") return 1;
+	if(str == "*" || str == "/") return 2;
+	if(str == "^") return 3;
 	else return -1;
 }
-
-static Expression* toExpr(const std::string& str){
-	if(isNumber(str)){
-		Variable* v = new Variable;
-		v->m_hasValue = true;
-		v->m_value = std::stod(str);
-		return v;
-	}
-	else if(str[0] == '('){
-		return getExpression(str.substr(1, str.length()-2));
-	}
-	else throw std::runtime_error(str + ": not an operand!");
+int getPriority(const std::pair<int, std::string>& p){
+	if(p.first != T_OPERATOR) throw expression_exception(p.second + " is not an operator");
+	return getPriority(p.second);
 }
 
-static Expression* evalVec(const std::vector<std::string>& parts, int start, int last){
-	Expression* ls = nullptr;
-	Expression* rs = nullptr;
-	
-	ls = toExpr(parts[start-1]);
+Expression* Expression::toExpression(const std::pair<int, std::string>& p){
+	if(p.first == T_NUMBER){
+		return new Constant(std::stod(p.second));
+	}
+	else if(p.first == T_BRACKET){
+		return Expression::getExpression(p.second.substr(1, p.second.length()-2));
+	}
+	else if(p.first == T_VARIABLE){
+		return new Variable(p.second);
+	}
+	else if(p.first == T_FUNCTION){
+		return new Function(p.second);
+	}
+	else if(p.first == T_OPERATOR){
+		     if(p.second == "+") return new Addition;
+		else if(p.second == "-") return new Subtraction;
+		else if(p.second == "*") return new Multiplication;
+		else if(p.second == "/") return new Division;
+		else if(p.second == "=") return new Assign;
+		else throw expression_exception(p.second + ": No such operation");
+	}
+	else throw expression_exception(p.second + ": not convertable to expression");
+}
+
+static Expression* evalVec(const std::vector<Expression*>& expressions, int start, int last){
+	Expression* ls = expressions[start-1];
+	Expression* rs;
 	
 	int inc = 2;
 	for(int i = start; i < last; i += inc){
 		inc = 2;
-		int priority = getPriority(parts[i]);
-		if(priority == -1) throw std::runtime_error(parts[i] + ": Not an operation");
+		int priority = getPriority(expressions[i]);
+		if(priority == -1) throw std::runtime_error(expressions[i]->toString() + ": Not an operation");
 		
-		if(i+2 < last && getPriority(parts[i+2]) > priority){
+		if(i+2 < last && getPriority(expressions[i+2]) > priority){
 			int nLast = last;
 			// Find the end of right operand
 			for(int j = i+2; j < last; j += 2){
-				int p = getPriority(parts[j]);
+				int p = getPriority(expressions[j]);
 				if(p <= priority){
 					nLast = j;
 					break;
 				}
 			}
 			
-			rs = evalVec(parts, i+2, nLast);
+			rs = evalVec(expressions, i+2, nLast);
 			inc = nLast-i;
 		}
 		else if(i+1 < last){
-			rs = toExpr(parts[i+1]);
+			rs = expressions[i+1];
 		}
-		else throw std::runtime_error(parts[i] + "Missing right operand.");
+		else throw std::runtime_error("Missing right operand");
 		
-		Operation<2>* op;
-		if(parts[i] == "+") op = new Addition;
-		else if(parts[i] == "-") op = new Subtraction;
-		else if(parts[i] == "*") op = new Multiplication;
-		else if(parts[i] == "/") op = new Division;
+		Operation<2>* op = (Operation<2>*)expressions[i];
 		
-		std::cout << ls->m_value << parts[i] << rs->m_value << std::endl;
+		//std::cout << ls->m_value << expressions[i] << rs->m_value << std::endl;
 		op->operands[0] = ls;
 		op->operands[1] = rs;
 		ls = op;
-		
 	}
 	
 	return ls;
 }
 
-Expression* getExpression(const std::string& str){
-	if(str.empty()) throw std::runtime_error("Input was empty.");
+static std::vector<Expression*> convertVec(const std::vector<std::pair<int, std::string>>& parts){
+	std::vector<Expression*> expressions;
+	
+	for(int i = 0; i < (int)parts.size(); i++){
+		Expression* e = Expression::toExpression(parts[i]);
+		
+		if(i > 0 && parts[i].first == T_BRACKET && parts.at(i-1).first == T_FUNCTION){
+			((Function*)expressions.at(i-1))->setArgument(e);
+			continue;
+		}
+		
+		expressions.push_back(e);
+	}
+	
+	return expressions;
+}
 
-	int mode = 0, oldMode = 0; // 0 none; 1 digit; 2 operation; 3 brackets
+static std::vector<std::pair<int, std::string>> toVec(const std::string& str){
+	int type = 0, oldType = 0;
+	
 	int beg = 0;
 	bool bBracket = false;
 	int cBracket = 0;
-	std::vector<std::string> parts;
+	std::vector<std::pair<int, std::string>> parts;
 	for(int i = 0; i < (int)str.length(); i++){
 		char c = str[i];
 		
-		oldMode = mode;
+		oldType = type;
 		
 		if(!bBracket){
-			if((c >= '0' && c <= '9') || c == '.'){
-				mode = 1;
+			if(((c >= '0' && c <= '9') || c == '.') && oldType != T_VARFUNC){
+				type = T_NUMBER;
 			}
-			else if(c == '+' || c == '-' || c == '*' || c == '/'){
-				mode = 2;
+			else if(c == '+' || c == '-' || c == '*' || c == '/' || c == '='){
+				type = T_OPERATOR;
+			}
+			else if((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')){
+				type = T_VARFUNC;
 			}
 			else if(c == ' '){
-				mode = 0;
+				type = T_NONE;
 			}
 		}
 		if(c == '('){
-			//if(!bBracket) bBeg = i;
 			cBracket++;
 			bBracket = true;
-			mode = 3;
+			type = T_BRACKET;
 		}
 		else if(c == ')'){
 			cBracket--;
-			if(cBracket == 0){
-				bBracket = false;
-				//i++;
-				//parts.push_back(str.substr(bBeg, i+1-bBeg));
-				//std::cout << '\"' << str.substr(bBeg, i+1-bBeg) << '\"' << std::endl;
-				
-			}
+			if(cBracket == 0) bBracket = false;
 		}
 		
-		if(mode != oldMode){
-			//std::cout << beg << ", " << i << std::endl;
-			if(oldMode != 0){
+		if(type != oldType){
+			if(oldType != T_NONE){
 				addPart:
-				parts.push_back(str.substr(beg, i-beg));
-				std::cout << '\"' << str.substr(beg, i-beg) << '\"' << std::endl;
+				parts.push_back({oldType, str.substr(beg, i-beg)});
 			}
 			beg = i;
 		}
 		if(i == (int)str.length()-1){
 			i++;
+			oldType = type;
 			goto addPart;
 		}
 	}
-	std::cout << std::endl;
 	
-	if(cBracket > 0) throw std::runtime_error("Unclosed bracket!");
-	else if(cBracket < 0) throw std::runtime_error("Unopened bracket!");
+	if(cBracket > 0) throw expression_exception("Unclosed bracket!");
+	else if(cBracket < 0) throw expression_exception("Unopened bracket!");
 	
-	Expression* e = evalVec(parts, 1, (int)parts.size());
-	e->evaluate();
+	for(int i = 0; i < (int)parts.size(); i++){
+		if(parts[i].first == T_VARFUNC){
+			if(i < (int)parts.size()-1 && parts[i+1].first == T_BRACKET){
+				parts[i].first = T_FUNCTION;
+			}
+			else{
+				parts[i].first = T_VARIABLE;
+			}
+		}
+	}
+	
+	return parts;
+}
+
+Expression* Expression::getExpression(const std::string& str){
+	if(str.empty()) throw expression_exception("Input was empty.");
+	
+	std::vector<std::pair<int, std::string>> parts = toVec(str);
+	//for(auto a : parts) std::cout << a.first << " : " << a.second << std::endl;
+	std::vector<Expression*> expressions = convertVec(parts);
+	
+	//std::cout << str << ": ";
+	//for(int i = 0; i < (int)expressions.size(); i++) std::cout << expressions[i]->getType() << std::endl;
+	//std::cout << std::endl;
+	
+	Expression* e = evalVec(expressions, 1, (int)expressions.size());
 	
 	return e;
 }
