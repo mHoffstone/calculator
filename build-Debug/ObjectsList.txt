@@ -1,1 +1,1 @@
-./build-Debug//src_nogui.cpp.o ./build-Debug//src_expression.cpp.o   
+./build-Debug//src_expression.cpp.o ./build-Debug//src_vector.cpp.o ./build-Debug//src_main.cpp.o ./build-Debug//src_graphcanvas.cpp.o   

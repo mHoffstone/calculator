@@ -83,7 +83,7 @@ build-Debug//src_main.cpp.o: src/main.cpp include/wx/wx.h \
  include/wx/textdlg.h include/wx/generic/textdlgg.h include/wx/valtext.h \
  include/wx/filedlg.h include/wx/msw/filedlg.h include/wx/mdi.h \
  include/wx/msw/mdi.h include/wx/splitter.h include/wx/generic/splitter.h \
- src/graphcanvas.h
+ src/graphcanvas.h src/expression.h src/vector.h
 
 include/wx/wx.h:
 
@@ -568,3 +568,7 @@ include/wx/splitter.h:
 include/wx/generic/splitter.h:
 
 src/graphcanvas.h:
+
+src/expression.h:
+
+src/vector.h:

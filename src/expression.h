@@ -6,7 +6,7 @@
 #include <exception>
 #include <map>
 #include <utility>
-#include <iostream>
+#include <vector>
 
 typedef double numtype;
 
@@ -18,11 +18,18 @@ enum OperationType{
 	OP_NONE, OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_ASSIGN
 };
 
+struct primfunc{
+	std::string name;
+	numtype (*f)(numtype);
+};
+
 class FunctionArgument;
 
 class Expression{
+	protected:
+		Expression(int t, bool safe);
+		void setValue(numtype v){value = v; bValue = true;}
 	public:
-		Expression(int t);
 		virtual ~Expression();
 		
 		virtual numtype getValue();
@@ -39,6 +46,9 @@ class Expression{
 			return type;
 		}
 		
+		static void init();
+		static void clean();
+		
 		static Expression* getExpression(const std::string& str);
 		static Expression* toExpression(const std::pair<int, std::string>& p);
 		
@@ -50,6 +60,7 @@ class Expression{
 		static std::map<std::string, std::pair<Expression*, FunctionArgument*>> functions;
 		
 	private:
+		static std::vector<Expression*> allExpressions;
 };
 
 class Variable : public Expression{
@@ -74,7 +85,7 @@ class Variable : public Expression{
 class Constant : public Expression{
 	public:
 		Constant();
-		Constant(numtype value);
+		Constant(numtype value, bool safe);
 		virtual ~Constant();
 		
 		virtual std::string toString() override;
@@ -90,10 +101,10 @@ class Constant : public Expression{
 
 class FunctionArgument : public Expression{
 	public:
-		FunctionArgument() : Expression(ET_FUNCTION_ARGUMENT){}
-		virtual ~FunctionArgument(){}
+		FunctionArgument();
+		virtual ~FunctionArgument();
 		
-		Expression* e;
+		Expression* e = nullptr;
 		
 		void evaluate() override{
 			e->evaluate();
@@ -120,11 +131,14 @@ class Function : public Expression{
 		void evaluate() override;
 		virtual std::string toString() override;
 		
+		static int getPrimfuncIndex(const std::string& name);
+		static numtype getPrimfuncVal(int index, numtype v);
+		
 		friend class Assign;
 		
 	protected:
 		std::string name;
-		Expression* arg;
+		Expression* arg = nullptr;
 };
 
 template <int opcount>

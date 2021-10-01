@@ -14,7 +14,7 @@ CurrentFileName        :=
 CurrentFilePath        :=
 CurrentFileFullPath    :=
 User                   :=19maho
-Date                   :=25/08/2021
+Date                   :=01/10/2021
 CodeLitePath           :="C:/Program Files/CodeLite"
 LinkerName             :=C:/msys64/mingw64/bin/g++.exe
 SharedObjectLinkerName :=C:/msys64/mingw64/bin/g++.exe -shared -fPIC
@@ -62,7 +62,7 @@ AS       := C:/msys64/mingw64/bin/as.exe
 ## User defined environment variables
 ##
 CodeLiteDir:=C:\Program Files\CodeLite
-Objects0=./build-$(ConfigurationName)//src_graphcanvas.cpp$(ObjectSuffix) ./build-$(ConfigurationName)//src_main.cpp$(ObjectSuffix) ./build-$(ConfigurationName)//src_expression.cpp$(ObjectSuffix) 
+Objects0=./build-$(ConfigurationName)//src_expression.cpp$(ObjectSuffix) ./build-$(ConfigurationName)//src_vector.cpp$(ObjectSuffix) ./build-$(ConfigurationName)//src_main.cpp$(ObjectSuffix) ./build-$(ConfigurationName)//src_graphcanvas.cpp$(ObjectSuffix) 
 
 
 
@@ -93,13 +93,21 @@ PreBuild:
 ##
 ## Objects
 ##
-./build-$(ConfigurationName)//src_graphcanvas.cpp$(ObjectSuffix): src/graphcanvas.cpp ./build-$(ConfigurationName)//src_graphcanvas.cpp$(DependSuffix)
-	$(CXX) $(IncludePCH) $(SourceSwitch) "H:/Documents/c++/calculator/src/graphcanvas.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/src_graphcanvas.cpp$(ObjectSuffix) $(IncludePath)
-./build-$(ConfigurationName)//src_graphcanvas.cpp$(DependSuffix): src/graphcanvas.cpp
-	@$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) -MG -MP -MT./build-$(ConfigurationName)//src_graphcanvas.cpp$(ObjectSuffix) -MF./build-$(ConfigurationName)//src_graphcanvas.cpp$(DependSuffix) -MM src/graphcanvas.cpp
+./build-$(ConfigurationName)//src_expression.cpp$(ObjectSuffix): src/expression.cpp ./build-$(ConfigurationName)//src_expression.cpp$(DependSuffix)
+	$(CXX) $(IncludePCH) $(SourceSwitch) "H:/Documents/c++/calculator/src/expression.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/src_expression.cpp$(ObjectSuffix) $(IncludePath)
+./build-$(ConfigurationName)//src_expression.cpp$(DependSuffix): src/expression.cpp
+	@$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) -MG -MP -MT./build-$(ConfigurationName)//src_expression.cpp$(ObjectSuffix) -MF./build-$(ConfigurationName)//src_expression.cpp$(DependSuffix) -MM src/expression.cpp
 
-./build-$(ConfigurationName)//src_graphcanvas.cpp$(PreprocessSuffix): src/graphcanvas.cpp
-	$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) ./build-$(ConfigurationName)//src_graphcanvas.cpp$(PreprocessSuffix) src/graphcanvas.cpp
+./build-$(ConfigurationName)//src_expression.cpp$(PreprocessSuffix): src/expression.cpp
+	$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) ./build-$(ConfigurationName)//src_expression.cpp$(PreprocessSuffix) src/expression.cpp
+
+./build-$(ConfigurationName)//src_vector.cpp$(ObjectSuffix): src/vector.cpp ./build-$(ConfigurationName)//src_vector.cpp$(DependSuffix)
+	$(CXX) $(IncludePCH) $(SourceSwitch) "H:/Documents/c++/calculator/src/vector.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/src_vector.cpp$(ObjectSuffix) $(IncludePath)
+./build-$(ConfigurationName)//src_vector.cpp$(DependSuffix): src/vector.cpp
+	@$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) -MG -MP -MT./build-$(ConfigurationName)//src_vector.cpp$(ObjectSuffix) -MF./build-$(ConfigurationName)//src_vector.cpp$(DependSuffix) -MM src/vector.cpp
+
+./build-$(ConfigurationName)//src_vector.cpp$(PreprocessSuffix): src/vector.cpp
+	$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) ./build-$(ConfigurationName)//src_vector.cpp$(PreprocessSuffix) src/vector.cpp
 
 ./build-$(ConfigurationName)//src_main.cpp$(ObjectSuffix): src/main.cpp ./build-$(ConfigurationName)//src_main.cpp$(DependSuffix)
 	$(CXX) $(IncludePCH) $(SourceSwitch) "H:/Documents/c++/calculator/src/main.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/src_main.cpp$(ObjectSuffix) $(IncludePath)
@@ -109,13 +117,13 @@ PreBuild:
 ./build-$(ConfigurationName)//src_main.cpp$(PreprocessSuffix): src/main.cpp
 	$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) ./build-$(ConfigurationName)//src_main.cpp$(PreprocessSuffix) src/main.cpp
 
-./build-$(ConfigurationName)//src_expression.cpp$(ObjectSuffix): src/expression.cpp ./build-$(ConfigurationName)//src_expression.cpp$(DependSuffix)
-	$(CXX) $(IncludePCH) $(SourceSwitch) "H:/Documents/c++/calculator/src/expression.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/src_expression.cpp$(ObjectSuffix) $(IncludePath)
-./build-$(ConfigurationName)//src_expression.cpp$(DependSuffix): src/expression.cpp
-	@$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) -MG -MP -MT./build-$(ConfigurationName)//src_expression.cpp$(ObjectSuffix) -MF./build-$(ConfigurationName)//src_expression.cpp$(DependSuffix) -MM src/expression.cpp
+./build-$(ConfigurationName)//src_graphcanvas.cpp$(ObjectSuffix): src/graphcanvas.cpp ./build-$(ConfigurationName)//src_graphcanvas.cpp$(DependSuffix)
+	$(CXX) $(IncludePCH) $(SourceSwitch) "H:/Documents/c++/calculator/src/graphcanvas.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/src_graphcanvas.cpp$(ObjectSuffix) $(IncludePath)
+./build-$(ConfigurationName)//src_graphcanvas.cpp$(DependSuffix): src/graphcanvas.cpp
+	@$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) -MG -MP -MT./build-$(ConfigurationName)//src_graphcanvas.cpp$(ObjectSuffix) -MF./build-$(ConfigurationName)//src_graphcanvas.cpp$(DependSuffix) -MM src/graphcanvas.cpp
 
-./build-$(ConfigurationName)//src_expression.cpp$(PreprocessSuffix): src/expression.cpp
-	$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) ./build-$(ConfigurationName)//src_expression.cpp$(PreprocessSuffix) src/expression.cpp
+./build-$(ConfigurationName)//src_graphcanvas.cpp$(PreprocessSuffix): src/graphcanvas.cpp
+	$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) ./build-$(ConfigurationName)//src_graphcanvas.cpp$(PreprocessSuffix) src/graphcanvas.cpp
 
 
 -include ./build-$(ConfigurationName)///*$(DependSuffix)
