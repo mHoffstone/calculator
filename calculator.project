@@ -3,6 +3,8 @@
   <Description/>
   <Dependencies/>
   <VirtualDirectory Name="src">
+    <File Name="src/vector.cpp"/>
+    <File Name="src/vector.h"/>
     <File Name="src/graphcanvas.h"/>
     <File Name="src/expression.h"/>
     <File Name="src/main.cpp"/>

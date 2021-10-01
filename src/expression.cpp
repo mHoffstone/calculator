@@ -2,18 +2,27 @@
 
 #include <iostream>
 #include <vector>
-#include <functional>
+#include <algorithm>
+#include <cmath>
 
 std::map<std::string, Expression*> Expression::variables;
 std::map<std::string, std::pair<Expression*, FunctionArgument*>> Expression::functions;
+std::vector<Expression*> Expression::allExpressions;
 
 enum Type{T_NONE, T_NUMBER, T_OPERATOR, T_BRACKET, T_VARFUNC, T_VARIABLE, T_FUNCTION};
 
-Expression::Expression(int t){
+static const primfunc primfuncs[]{
+	{"sqrt", std::sqrt},
+	{"sin", std::sin}
+};
+
+Expression::Expression(int t, bool safe = false){
 	type = t;
+	if(!safe) allExpressions.push_back(this);
 }
 Expression::~Expression(){
 	//dtor
+	//std::cout << this << " was deleted!" << std::endl;
 }
 numtype Expression::getValue(){
 	if(!hasValue()) throw expression_exception("Expression has no value!");
@@ -21,6 +30,27 @@ numtype Expression::getValue(){
 }
 bool Expression::hasValue(){
 	return bValue;
+}
+void Expression::init(){
+	
+}
+void Expression::clean(){
+	for(int i = 0; i < (int)allExpressions.size(); i++){
+		if(allExpressions[i] == nullptr) continue;
+		int n = std::count(allExpressions.begin(), allExpressions.end(), allExpressions[i]);
+		if(n > 1){
+			allExpressions[i] = nullptr;
+		}
+		else if(n == 1){
+			delete allExpressions[i];
+		}
+	}
+	allExpressions.clear();
+	
+	variables.clear();
+	functions.clear();
+	
+	init();
 }
 
 Variable::Variable() : Expression(ET_VARIABLE){
@@ -48,7 +78,7 @@ std::string Variable::toString(){
 Constant::Constant() : Expression(ET_CONSTANT){
 	
 }
-Constant::Constant(numtype value) : Expression(ET_CONSTANT){
+Constant::Constant(numtype value, bool safe = false) : Expression(ET_CONSTANT, safe){
 	bValue = true;
 	this->value = value;
 }
@@ -67,8 +97,12 @@ Operation<opcount>::Operation(int t) : Expression(ET_OPERATION){
 }
 template <int opcount>
 Operation<opcount>::~Operation(){
-	delete operands[0];
-	delete operands[1];
+	/*for(int i = 0; i < opcount; i++){
+		if(operands[i] != nullptr){
+			delete operands[i];
+			operands[i] = nullptr;
+		}
+	}*/
 }
 template <int opcount>
 std::string Operation<opcount>::toString(){
@@ -167,7 +201,7 @@ void Assign::replaceVariable(Expression** e, FunctionArgument* fa, const std::st
 	if((*e)->getType() == ET_VARIABLE){
 		Variable* v = ((Variable*)*e);
 		if(v->getName() == argName){
-			delete v;
+			//delete v;
 			*e = fa;
 		}
 	}
@@ -180,6 +214,7 @@ void Assign::replaceVariable(Expression** e, FunctionArgument* fa, const std::st
 }
 void Assign::evaluate(){
 	if(operands[0]->getType() == ET_VARIABLE){
+		//Expression::variables[((Variable*)operands[0])->name] = operands[1];
 		auto it = Expression::variables.find(((Variable*)operands[0])->name);
 		if(it == Expression::variables.end()){
 			Expression::variables[((Variable*)operands[0])->name] = operands[1];
@@ -192,11 +227,15 @@ void Assign::evaluate(){
 		std::string argName;
 		if(f->arg->getType() == ET_VARIABLE){
 			argName = ((Variable*)f->arg)->getName();
-			delete f->arg;
+			//delete f->arg;
 			f->arg = nullptr;
 			FunctionArgument* fa = new FunctionArgument;
 			
 			replaceVariable(&operands[1], fa, argName);
+			
+			//Expression::functions[f->name] = std::pair<Expression*, FunctionArgument*>(operands[1], fa);
+			int index = Function::getPrimfuncIndex(f->name);
+			if(index > -1) throw expression_exception(f->name + " is a built-in function");
 			
 			auto it = Expression::functions.find(f->name);
 			if(it == Expression::functions.end()){
@@ -219,21 +258,46 @@ Function::~Function(){
 	
 }
 void Function::evaluate(){
-	auto f = Expression::functions.find(name);
+	int index = getPrimfuncIndex(name);
+	if(index > -1){
+		arg->evaluate();
+		numtype v = arg->getValue();
+		setValue(getPrimfuncVal(index, v));
+		return;
+	}
 	
+	auto f = Expression::functions.find(name);
 	if(f != Expression::functions.end()){
 		f->second.second->e = arg;
 		f->second.first->evaluate();
-		bValue = f->second.first->hasValue();
-		value = f->second.first->getValue();
+		setValue(f->second.first->getValue());
+		return;
 	}
-	else throw expression_exception(name + " is not defined");
+
+	throw expression_exception(name + " is not defined");
 }
 void Function::setArgument(Expression* arg){
 	this->arg = arg;
 }
 std::string Function::toString(){
 	return name + std::string("(") + arg->toString() + std::string(")");
+}
+int Function::getPrimfuncIndex(const std::string& name){
+	int n = sizeof(primfuncs) / sizeof(primfunc);
+	for(int i = 0; i < n; i++){
+		if(primfuncs[i].name == name) return i;
+	}
+	return -1;
+}
+numtype Function::getPrimfuncVal(int index, numtype v){
+	return primfuncs[index].f(v);
+}
+
+FunctionArgument::FunctionArgument() : Expression(ET_FUNCTION_ARGUMENT){
+	
+}
+FunctionArgument::~FunctionArgument(){
+	
 }
 
 bool isNumber(const std::string& str){
@@ -425,7 +489,7 @@ static std::vector<std::pair<int, std::string>> toVec(const std::string& str){
 }
 
 Expression* Expression::getExpression(const std::string& str){
-	if(str.empty()) throw expression_exception("Input was empty.");
+	if(str.empty()) throw expression_exception("Input was empty");
 	
 	std::vector<std::pair<int, std::string>> parts = toVec(str);
 	//for(auto a : parts) std::cout << a.first << " : " << a.second << std::endl;

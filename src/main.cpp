@@ -29,13 +29,15 @@ class MainFrame : public wxFrame{
 	private:
 		const wxFont font = wxFont(12, wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
 
-		void addTextController();
+		void addTextController(int index = -1);
 		void removeTextController(int index);
 
 		void OnHello(wxCommandEvent& event);
 		void OnExit(wxCommandEvent& event);
 		void OnAbout(wxCommandEvent& event);
 		void OnText(wxCommandEvent& event);
+		void OnKey(wxKeyEvent& event);
+		void OnMouseMove(wxMouseEvent& event);
 
 		wxSplitterWindow* splitter;
 		ScrollPane* scrollPane;
@@ -94,11 +96,13 @@ MainFrame::MainFrame() : wxFrame(NULL, wxID_ANY, "Calculator", wxDefaultPosition
 	Bind(wxEVT_TEXT, &MainFrame::OnText, this);
 }
 
-void MainFrame::addTextController(){
-	wxTextCtrl* text = new wxTextCtrl(scrollPane, wxID_ANY, "", wxDefaultPosition, wxDefaultSize);
+void MainFrame::addTextController(int index){
+	if(index == -1) index = textControllers.size();
+	wxTextCtrl* text = new wxTextCtrl(scrollPane, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+	text->Bind(wxEVT_KEY_DOWN, &MainFrame::OnKey, this);
 	text->SetFont(font);
-	textControllers.push_back(text);
-	scrollPane->sizer->Insert(textControllers.size()-1,
+	textControllers.insert(textControllers.begin()+index, text);
+	scrollPane->sizer->Insert(index,
 		text,
 		0,							// make vertically unstretchable
 		wxEXPAND |					// make horizontally stretchable
@@ -109,14 +113,15 @@ void MainFrame::addTextController(){
 	scrollPane->FitInside();
 	scrollPane->sizer->Layout();
 
-	canvas->inputs.push_back("");
+	canvas->add(index, "");
 }
 
 void MainFrame::removeTextController(int index){
 	wxTextCtrl* txtCtrl = textControllers[index];
 	deletePool.push_back(txtCtrl);
 	textControllers.erase(textControllers.begin()+index);
-	canvas->inputs.erase(canvas->inputs.begin()+index);
+	//canvas->inputs.erase(canvas->inputs.begin()+index);
+	canvas->remove(index);
 	scrollPane->sizer->Detach(index);
 	txtCtrl->Hide();
 	scrollPane->FitInside();
@@ -138,19 +143,69 @@ void MainFrame::OnText(wxCommandEvent& event){
 		deletePool.erase(deletePool.begin());
 		txtCtrl->Destroy();
 	}
+	
+	Expression::clean();
+	
 	for(int i = 0; i < (int)textControllers.size(); i++){
 		wxTextCtrl* txtCtrl = textControllers[i];
 		std::string text = txtCtrl->GetLineText(0).ToStdString();
-		if(text.empty() && i != (int)textControllers.size()-1){
-			removeTextController(i);
-			i--;
+		//if(text.empty() && i != (int)textControllers.size()-1){
+		//	removeTextController(i);
+		//	i--;
+		//}
+		//else{
+		//	//canvas->inputs[i] = text;
+			canvas->set(i, text);
+		//}
+	}
+	//if(!textControllers[(int)textControllers.size()-1]->GetLineText(0).ToStdString().empty()){
+	//	addTextController();
+	//}
+	canvas->Refresh();
+}
+void MainFrame::OnKey(wxKeyEvent& event){
+	wxChar uc = event.GetUnicodeKey();
+	
+	int active = -1;
+	for(int i = 0; i < (int)textControllers.size(); i++){
+		if(textControllers[i]->HasFocus()){
+			active = i;
+			break;
+		}
+	}
+	if(active == -1){
+		std::cout << "No text controller was active!" << std::endl;
+		return;
+	}
+	
+	if(uc != WXK_NONE){
+		if(uc == WXK_RETURN){
+			addTextController(active+1);
+			textControllers[active+1]->SetFocus();
 		}
 		else{
-			canvas->inputs[i] = text;
+			if(uc == WXK_BACK){
+				if(textControllers[active]->GetLineText(0).ToStdString().empty() && (int)textControllers.size() > 1){
+					removeTextController(active);
+					if(active > 0) textControllers[active-1]->SetFocus();
+				}
+			}
+			
+			event.Skip();
 		}
 	}
-	if(!textControllers[(int)textControllers.size()-1]->GetLineText(0).ToStdString().empty()){
-		addTextController();
+	else{
+		switch(event.GetKeyCode()){
+			case WXK_UP:
+				if(active > 0) textControllers[active-1]->SetFocus();
+				break;
+			case WXK_DOWN:
+				if(active < (int)textControllers.size() - 1) textControllers[active+1]->SetFocus();
+				break;
+			default:
+				event.Skip();
+		}
 	}
+	
 	canvas->Refresh();
 }

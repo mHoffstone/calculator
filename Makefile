@@ -1,8 +1,8 @@
 .PHONY: clean All
 
 All:
-	@echo "----------Building project:[ nogui - Debug ]----------"
-	@"$(MAKE)" -f  "nogui.mk"
+	@echo "----------Building project:[ calculator - Debug ]----------"
+	@"$(MAKE)" -f  "calculator.mk"
 clean:
-	@echo "----------Cleaning project:[ nogui - Debug ]----------"
-	@"$(MAKE)" -f  "nogui.mk" clean
+	@echo "----------Cleaning project:[ calculator - Debug ]----------"
+	@"$(MAKE)" -f  "calculator.mk" clean
