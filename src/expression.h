@@ -15,12 +15,7 @@ enum ExpressionType{
 };
 
 enum OperationType{
-	OP_NONE, OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_ASSIGN
-};
-
-struct primfunc{
-	std::string name;
-	numtype (*f)(numtype);
+	OP_NONE, OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_POW, OP_MOD, OP_ASSIGN
 };
 
 class FunctionArgument;
@@ -76,6 +71,9 @@ class Variable : public Expression{
 			return name;
 		}
 		
+		static int getBuiltInVariableIndex(const std::string& name);
+		static numtype getBuiltInVariable(int index);
+		
 		friend class Assign;
 		
 	private:
@@ -85,7 +83,7 @@ class Variable : public Expression{
 class Constant : public Expression{
 	public:
 		Constant();
-		Constant(numtype value, bool safe);
+		Constant(numtype value, bool safe = false);
 		virtual ~Constant();
 		
 		virtual std::string toString() override;
@@ -186,6 +184,22 @@ class Division : public Operation<2>{
 	public:
 		Division();
 		virtual ~Division();
+		
+		void evaluate() override;
+};
+
+class Modulo : public Operation<2>{
+	public:
+		Modulo();
+		virtual ~Modulo();
+		
+		void evaluate() override;
+};
+
+class Power : public Operation<2>{
+	public:
+		Power();
+		virtual ~Power();
 		
 		void evaluate() override;
 };

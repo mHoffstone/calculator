@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CodeLite_Workspace Name="calculator" Database="" Version="10000">
-  <Project Name="calculator" Path="calculator.project" Active="Yes"/>
-  <Project Name="nogui" Path="nogui.project" Active="No"/>
+  <Project Name="calculator" Path="calculator.project" Active="No"/>
+  <Project Name="nogui" Path="nogui.project" Active="Yes"/>
   <BuildMatrix>
     <WorkspaceConfiguration Name="Debug" Selected="yes">
       <Environment/>

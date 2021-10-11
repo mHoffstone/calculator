@@ -3,6 +3,9 @@
 #include <wx/wx.h>
 #include <wx/dcbuffer.h>
 
+#include <sstream>
+#include <iomanip>
+
 wxBEGIN_EVENT_TABLE(GraphCanvas, wxWindow)
 	EVT_PAINT(GraphCanvas::OnPaint)
 wxEND_EVENT_TABLE()
@@ -21,6 +24,14 @@ GraphCanvas::GraphCanvas(wxWindow* parent, wxWindowID id, wxPoint pos, wxSize si
 }
 GraphCanvas::~GraphCanvas(){
 
+}
+
+std::string toString(double d, int p){
+	std::ostringstream stream;
+	stream << std::fixed;
+	stream << std::setprecision(p);
+	stream << d;
+	return stream.str();
 }
 
 void GraphCanvas::OnPaint(wxPaintEvent& event){
@@ -48,25 +59,22 @@ void GraphCanvas::OnPaint(wxPaintEvent& event){
 	//dc.DrawText(wxT("Hello"), wxPoint(size.x/2, size.y/2));
 	
 	{
-		float m = 1.0f;
+		double m = std::pow(10.0, std::floor(std::log10(300.0/zoom.x)));
 		vec2d start = toScreen({0.0, 0.0});
-		vec2d next;
-		vec2d delta;
-		while(true){
-			next = toScreen({1.0 * m, 1.0 * m});
-			delta = next - start;
-			if(delta.x < 30.0f) m *= 10.0f;
-			else break;
-		}
+		vec2d next = toScreen({1.0 * m, 1.0 * m});
+		vec2d delta = next - start;
 		
 		dc.DrawLine(wxPoint(0, start.y), wxPoint(size.x, start.y));
 		dc.DrawLine(wxPoint(start.x, 0), wxPoint(start.x, size.y));
+		
+		int p = -std::log10(m);
+		if(p < 0) p = 0;
 	
 		for(int i = -start.x/delta.x; i < (size.x-start.x)/delta.x; i++){
-			dc.DrawText(std::to_string(i * (int)m), start + vec2d{delta.x * i, 0.0});
+			dc.DrawText(toString(i * m, p), start + vec2d{delta.x * i, 0.0});
 		}
 		for(int i = (size.y-start.y)/delta.y; i < -start.y/delta.y; i++){
-			dc.DrawText(std::to_string(i * (int)m), start + vec2d{0.0, delta.y * i});
+			dc.DrawText(toString(i * m, p), start + vec2d{0.0, delta.y * i});
 		}
 	}
 	
