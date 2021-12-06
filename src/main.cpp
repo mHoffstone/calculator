@@ -83,12 +83,18 @@ MainFrame::MainFrame() : wxFrame(NULL, wxID_ANY, "Calculator", wxDefaultPosition
 	
 	splitter = new wxSplitterWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_BORDER | wxSP_LIVE_UPDATE);
 	scrollPane = new ScrollPane(splitter, wxID_ANY);
-	canvas = new GraphCanvas(splitter, wxID_ANY, wxDefaultPosition, wxSize(400, 300));
+	canvas = new GraphCanvas(splitter, wxID_ANY, wxDefaultPosition, wxSize(0, 0));
 	
 	addTextController();
 	
 	splitter->SetMinimumPaneSize(200);
 	splitter->SplitVertically(scrollPane, canvas);
+	//splitter->Fit();
+	
+	//Fit();
+	SetSize(900, 600);
+	splitter->SetSashPosition(300);
+	
 	
 	Bind(wxEVT_MENU, &MainFrame::OnHello, this, ID::HELLO);
 	Bind(wxEVT_MENU, &MainFrame::OnAbout, this, wxID_ABOUT);

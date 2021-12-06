@@ -28,10 +28,15 @@ class Expression{
 		virtual ~Expression();
 		
 		virtual numtype getValue();
-		virtual bool hasValue();
+		bool hasValue(){return bValue;}
 		
-		virtual void evaluate(){};
-		virtual std::string toString(){return "";};
+		virtual void evaluate(bool simplify){}
+		
+		static std::string toString(numtype v);
+		virtual std::string toString(){
+			if(hasValue()) return toString(value);
+			else return "#";
+		}
 		
 		static Expression* getVariable(const std::string& name){
 			return variables[name];
@@ -47,12 +52,17 @@ class Expression{
 		static Expression* getExpression(const std::string& str);
 		static Expression* toExpression(const std::pair<int, std::string>& p);
 		
+		static std::pair<Expression*, FunctionArgument*> getDrawFunction(int index){
+			return drawFunctions.at(index);
+		}
+		
 	protected:
 		bool bValue = false;
 		numtype value = -1.0;
 		int type;
 		static std::map<std::string, Expression*> variables;
 		static std::map<std::string, std::pair<Expression*, FunctionArgument*>> functions;
+		static std::vector<std::pair<Expression*, FunctionArgument*>> drawFunctions;
 		
 	private:
 		static std::vector<Expression*> allExpressions;
@@ -64,7 +74,7 @@ class Variable : public Expression{
 		Variable(std::string name);
 		virtual ~Variable();
 		
-		void evaluate() override;
+		void evaluate(bool simplify) override;
 		virtual std::string toString() override;
 		
 		std::string getName(){
@@ -104,13 +114,13 @@ class FunctionArgument : public Expression{
 		
 		Expression* e = nullptr;
 		
-		void evaluate() override{
-			e->evaluate();
+		void evaluate(bool simplify) override{
+			e->evaluate(simplify);
 			bValue = e->hasValue();
 			value = e->getValue();
 		}
 		std::string toString() override{
-			return "FUNCTION ARGUMENT";
+			return "x";
 		}
 };
 class Function : public Expression{
@@ -126,7 +136,7 @@ class Function : public Expression{
 			return name;
 		}
 		
-		void evaluate() override;
+		void evaluate(bool simplify) override;
 		virtual std::string toString() override;
 		
 		static int getPrimfuncIndex(const std::string& name);
@@ -137,6 +147,7 @@ class Function : public Expression{
 	protected:
 		std::string name;
 		Expression* arg = nullptr;
+		bool bDefined = false;
 };
 
 template <int opcount>
@@ -161,7 +172,7 @@ class Addition : public Operation<2>{
 		Addition();
 		virtual ~Addition();
 		
-		void evaluate() override;
+		void evaluate(bool simplify) override;
 };
 
 class Subtraction : public Operation<2>{
@@ -169,7 +180,7 @@ class Subtraction : public Operation<2>{
 		Subtraction();
 		virtual ~Subtraction();
 		
-		void evaluate() override;
+		void evaluate(bool simplify) override;
 };
 
 class Multiplication : public Operation<2>{
@@ -177,7 +188,7 @@ class Multiplication : public Operation<2>{
 		Multiplication();
 		virtual ~Multiplication();
 		
-		void evaluate() override;
+		void evaluate(bool simplify) override;
 };
 
 class Division : public Operation<2>{
@@ -185,7 +196,7 @@ class Division : public Operation<2>{
 		Division();
 		virtual ~Division();
 		
-		void evaluate() override;
+		void evaluate(bool simplify) override;
 };
 
 class Modulo : public Operation<2>{
@@ -193,7 +204,7 @@ class Modulo : public Operation<2>{
 		Modulo();
 		virtual ~Modulo();
 		
-		void evaluate() override;
+		void evaluate(bool simplify) override;
 };
 
 class Power : public Operation<2>{
@@ -201,7 +212,7 @@ class Power : public Operation<2>{
 		Power();
 		virtual ~Power();
 		
-		void evaluate() override;
+		void evaluate(bool simplify) override;
 };
 
 class Assign : public Operation<2>{
@@ -209,7 +220,7 @@ class Assign : public Operation<2>{
 		Assign();
 		virtual ~Assign();
 		
-		void evaluate() override;
+		void evaluate(bool simplify) override;
 		
 	private:
 		void replaceVariable(Expression** e, FunctionArgument* fa, const std::string& argName);
@@ -217,17 +228,26 @@ class Assign : public Operation<2>{
 
 class expression_exception : public std::exception{
 	public:
-		expression_exception(const std::string& what_arg){
+		expression_exception(const std::string& what_arg, int type = 0){
 			s = what_arg;
+			this->type = type;
 		}
 		virtual ~expression_exception(){}
+		
+		static const int T_NO_VALUE = 1;
 		
 		virtual const char* what() const noexcept override{
 			return s.c_str();
 		}
 		
+		const int get_type() const noexcept{
+			//return 0;
+			return type;
+		}
+		
 	private:
 		std::string s;
+		int type;
 };
 
 #endif // EXPRESSION_H

@@ -78,31 +78,74 @@ void GraphCanvas::OnPaint(wxPaintEvent& event){
 		}
 	}
 	
+	int onlyDrawFunctionIndex = 0;
 	for(int i = 0; i < (int)inputs.size(); i++){
 		Expression* e = expressions.at(i);
-		if(e != nullptr && e->getType() == ET_OPERATION && ((Operation<2>*)e)->getOperationType() == OP_ASSIGN && ((Operation<2>*)e)->operands[0]->getType() == ET_FUNCTION){
-			Function* f = (Function*)(((Operation<2>*)e)->operands[0]);
-			vec2d old;
-			try{
-				for(int j = 0; j < size.x; j++){
-					vec2d w = toWorld({(double)j, 0.0});
-					
-					Constant c(w.x, true);
-					f->setArgument(&c);
-					f->evaluate();
-					numtype v = f->getValue();
-					
-					vec2d s = toScreen({0.0, v});
-					s.x = j;
-					
-					if(j != 0){
-						dc.DrawLine(old, s);
+		if(e != nullptr && e->getType() == ET_OPERATION && ((Operation<2>*)e)->getOperationType() == OP_ASSIGN){
+			if(((Operation<2>*)e)->operands[0]->getType() == ET_FUNCTION){
+				Function* f = (Function*)(((Operation<2>*)e)->operands[0]);
+				bool isDrawOnly = false;
+				std::pair<Expression*, FunctionArgument*> p;
+				if(f->getName() == "y"){
+					isDrawOnly = true;
+					p = Expression::getDrawFunction(onlyDrawFunctionIndex);
+					onlyDrawFunctionIndex++;
+				}
+				vec2d old;
+				try{
+					for(int j = 0; j < size.x; j++){
+						vec2d w = toWorld({(double)j, 0.0});
+						
+						Constant c(w.x, true);
+						numtype v;
+						if(!isDrawOnly){
+							f->setArgument(&c);
+							f->evaluate(false);
+							v = f->getValue();
+						}
+						else{
+							// Set argument for function and evaluate for draw only
+							p.second->e = &c;
+							p.second->e->evaluate(false);
+							p.first->evaluate(false);
+							v = p.first->getValue();
+						}
+						
+						vec2d s = toScreen({0.0, v});
+						s.x = j;
+						
+						if(j != 0){
+							dc.DrawLine(old, s);
+						}
+						old = s;
 					}
-					old = s;
+				}
+				/*catch(expression_exception& err){
+					if(err.get_type() == expression_exception::T_NO_VALUE){
+						outputs.at(i) = e->toString();
+					}
+					else{
+						outputs.at(i) = err.what();
+					}
+				}*/
+				catch(std::exception& err){
+					outputs.at(i) = err.what();
 				}
 			}
-			catch(std::exception& err){
-				outputs.at(i) = err.what();
+			else if(((Operation<2>*)e)->operands[0]->getType() == ET_VARIABLE){
+				try{
+					((Operation<2>*)e)->operands[0]->evaluate(false);
+					outputs.at(i) = Expression::toString(((Operation<2>*)e)->operands[0]->getValue());
+				}
+				catch(const expression_exception& ex){
+					if(ex.get_type() == expression_exception::T_NO_VALUE){
+						outputs.at(i) = ((Operation<2>*)e)->operands[0]->toString();
+					}
+					else outputs.at(i) = ex.what();
+				}
+				catch(const std::exception& err){
+					outputs.at(i) = err.what();
+				}
 			}
 		}
 		
@@ -122,25 +165,42 @@ void GraphCanvas::add(int i, const std::string& str){
 	expressions.insert(expressions.begin()+i, nullptr);
 	outputs.insert(outputs.begin()+i, "");
 	
-	set(inputs.size()-1, str);
+	set(i, str);
 }
 void GraphCanvas::set(int i, const std::string& str){
 	inputs.at(i) = str;
 	
+	Expression* e = nullptr;
+	expressions.at(i) = nullptr;
 	try{
-		Expression* e = Expression::getExpression(str);
-		e->evaluate();
+		e = Expression::getExpression(str);
+		e->evaluate(false);
 		expressions.at(i) = e;
-		if(e->hasValue()){
-			outputs.at(i) = std::to_string(e->getValue());
+		/*if(e->hasValue()){
+			outputs.at(i) = Expression::toString(e->getValue());
+		}
+		else{*/
+			//outputs.at(i) = "";
+			outputs.at(i) = e->toString();
+		//}
+	}
+	catch(const expression_exception& err){
+		if(err.get_type() == expression_exception::T_NO_VALUE){
+			if(e == nullptr){
+				outputs.at(i) = "???";
+			}
+			else{
+				outputs.at(i) = e->toString();
+				//outputs.at(i) = err.what();
+			}
 		}
 		else{
-			outputs.at(i) = "";
-			//outputs.at(i) = e->toString();
+			outputs.at(i) = err.what();
 		}
 	}
-	catch(std::exception& err){
-		outputs.at(i) = err.what();
+	catch(const std::exception& err){
+		outputs.at(i) = std::string("Other error: ") + err.what();
+		//outputs.at(i) = err.what();
 		expressions.at(i) = nullptr;
 	}
 }
