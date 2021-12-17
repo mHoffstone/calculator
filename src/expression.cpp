@@ -91,7 +91,7 @@ void Variable::evaluate(bool simplify){
 	if(Expression::variables.find(name) != Expression::variables.end()){
 		Expression* e = Expression::variables[name];
 		e->evaluate(simplify);
-		setValue(e->getValue());
+		if(e->hasValue()) setValue(e->getValue());
 		return;
 	}
 	
@@ -168,7 +168,7 @@ void Function::setArgument(Expression* arg){
 	this->arg = arg;
 }
 std::string Function::toString(){
-	return name + std::string("(x)");
+	return name + std::string("(") + arg->toString() + std::string(")");
 }
 int Function::getPrimfuncIndex(const std::string& name){
 	int n = sizeof(primfuncs) / sizeof(primfunc);
@@ -241,7 +241,12 @@ std::string Operation<opcount>::toString(){
 		if(operands[1]->hasValue()) brackets[1] = false;
 		std::string str = "";
 		if(brackets[0]) str += "(";
-		str += operands[0]->toString();
+		if(operands[0]->getType() == ET_FUNCTION){
+			str += ((Function*)operands[0])->getName() + std::string("(x)");
+		}
+		else{
+			str += operands[0]->toString();
+		}
 		if(brackets[0]) str += ")";
 		str += opname;
 		if(brackets[1]) str += "(";
@@ -479,12 +484,13 @@ void Assign::evaluate(bool simplify){
 				
 				if(f->getName() == "y"){
 					Expression::drawFunctions.push_back(std::pair<Expression*, FunctionArgument*>(operands[1], fa));
+					//operands[1]->evaluate(simplify);
 				}
 				else{
 					auto it = Expression::functions.find(f->name);
 					if(it == Expression::functions.end()){
 						Expression::functions[f->name] = std::pair<Expression*, FunctionArgument*>(operands[1], fa);
-						operands[1]->evaluate(simplify);
+						//operands[1]->evaluate(simplify);
 					}
 					else{
 						if(simplify) throw expression_exception(f->name + " is already defined");

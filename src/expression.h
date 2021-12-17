@@ -115,6 +115,7 @@ class FunctionArgument : public Expression{
 		Expression* e = nullptr;
 		
 		void evaluate(bool simplify) override{
+			if(e == nullptr) return;
 			e->evaluate(simplify);
 			bValue = e->hasValue();
 			value = e->getValue();
