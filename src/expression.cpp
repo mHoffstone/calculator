@@ -136,6 +136,12 @@ FunctionArgument::FunctionArgument() : Expression(ET_FUNCTION_ARGUMENT){
 FunctionArgument::~FunctionArgument(){
 	
 }
+void FunctionArgument::evaluate(bool simplify){
+	if(e == nullptr) return;
+	e->evaluate(simplify);
+	bValue = e->hasValue();
+	value = e->getValue();
+}
 
 Function::Function(std::string name) : Expression(ET_FUNCTION), name(name){
 	
@@ -168,6 +174,7 @@ void Function::setArgument(Expression* arg){
 	this->arg = arg;
 }
 std::string Function::toString(){
+	if(hasValue()) return Expression::toString();
 	return name + std::string("(") + arg->toString() + std::string(")");
 }
 int Function::getPrimfuncIndex(const std::string& name){
@@ -189,12 +196,7 @@ Operation<opcount>::Operation(int t) : Expression(ET_OPERATION){
 }
 template <int opcount>
 Operation<opcount>::~Operation(){
-	/*for(int i = 0; i < opcount; i++){
-		if(operands[i] != nullptr){
-			delete operands[i];
-			operands[i] = nullptr;
-		}
-	}*/
+
 }
 template <int opcount>
 std::string Operation<opcount>::toString(){
@@ -632,26 +634,39 @@ static Expression* evalVec(const std::vector<Expression*>& expressions, int star
 static std::vector<Expression*> convertVec(const std::vector<std::pair<int, std::string>>& parts){
 	std::vector<Expression*> expressions;
 	
+	Multiplication* negatives = nullptr;
+	Multiplication* negativeTop = nullptr;
 	for(int i = 0; i < (int)parts.size(); i++){
-		#ifdef DBG
-		std::cout << " - " << parts[i].second << std::endl;
-		#endif
 		
+		Expression* e;
 		if((i == 0 || parts[i-1].first == T_OPERATOR) && parts[i].second == "-"){
-			expressions.push_back(new Constant(-1.0));
-			expressions.push_back(new Multiplication);
+			Multiplication* m = new Multiplication;
+			m->operands[0] = new Constant(-1.0);
+			if(negatives == nullptr){
+				negatives = m;
+			}
+			else{
+				negativeTop->operands[1] = m;
+			}
+			negativeTop = m;
 			continue;
 		}
+		else{
+			e = Expression::toExpression(parts[i]);
+			if(negatives != nullptr){
+				negativeTop->operands[1] = e;
+				e = negatives;
+				negatives = nullptr;
+			}
+		}
 		
-		Expression* e = Expression::toExpression(parts[i]);
-		
-		if(i > 0 && parts[i].first == T_BRACKET && parts.at(i-1).first == T_FUNCTION){
+		if(i > 0 && parts[i].first == T_BRACKET && parts[i-1].first == T_FUNCTION){
 			((Function*)expressions.back())->setArgument(e);
 			continue;
 		}
 		
 		expressions.push_back(e);
-	}	
+	}
 	
 	return expressions;
 }
@@ -698,8 +713,8 @@ static std::vector<std::pair<int, std::string>> toVec(const std::string& str){
 		}
 		
 		if(shouldAdd){
+			addPart:
 			if(oldType != T_NONE){
-				addPart:
 				parts.push_back({oldType, str.substr(beg, i-beg)});
 			}
 			beg = i;
@@ -725,8 +740,14 @@ static std::vector<std::pair<int, std::string>> toVec(const std::string& str){
 		}
 	}
 	
-	if(parts[parts.size()-1].first == T_OPERATOR && parts[parts.size()-2].first == T_OPERATOR){
-		throw expression_exception("Input cannot end with two operations");
+	for(int i = 1; i < (int)parts.size(); i++){
+		if((parts[i].first == T_OPERATOR && parts[i].second != "-") && parts[i-1].first == T_OPERATOR){
+			throw expression_exception("Input cannot contain two successive operations");
+		}
+	}
+	
+	if((int)parts.size() == 1 && parts[0].first == T_OPERATOR){
+		throw expression_exception("Input cannot be a single operation");
 	}
 	
 	return parts;
@@ -736,17 +757,8 @@ Expression* Expression::getExpression(const std::string& str){
 	if(str.empty()) throw expression_exception("Input was empty");
 	
 	std::vector<std::pair<int, std::string>> parts = toVec(str);
-	#ifdef DBG
-	for(auto a : parts) std::cout << a.first << " : " << a.second << std::endl;
-	std::cout << std::endl;
-	#endif
+
 	std::vector<Expression*> expressions = convertVec(parts);
-	
-	#ifdef DBG
-	std::cout << str << ": " << std::endl;
-	for(int i = 0; i < (int)expressions.size(); i++) std::cout << expressions[i]->getType() << std::endl;
-	std::cout << std::endl;
-	#endif
 	
 	Expression* e = evalVec(expressions, 1, (int)expressions.size());
 	

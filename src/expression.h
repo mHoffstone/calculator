@@ -28,7 +28,10 @@ class Expression{
 		virtual ~Expression();
 		
 		virtual numtype getValue();
-		bool hasValue(){return bValue;}
+		
+		bool hasValue(){
+			return bValue;
+		}
 		
 		virtual void evaluate(bool simplify){}
 		
@@ -114,12 +117,8 @@ class FunctionArgument : public Expression{
 		
 		Expression* e = nullptr;
 		
-		void evaluate(bool simplify) override{
-			if(e == nullptr) return;
-			e->evaluate(simplify);
-			bValue = e->hasValue();
-			value = e->getValue();
-		}
+		void evaluate(bool simplify) override;
+		
 		std::string toString() override{
 			return "x";
 		}
@@ -242,7 +241,6 @@ class expression_exception : public std::exception{
 		}
 		
 		const int get_type() const noexcept{
-			//return 0;
 			return type;
 		}
 		
