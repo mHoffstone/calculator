@@ -11,7 +11,8 @@ int main(){
 		
 		try{
 			Expression* e = Expression::getExpression(input);
-			e->evaluate();
+			e->evaluate(true);
+			e->evaluate(false);
 			if(e->hasValue()){
 				std::cout << e->getValue() << std::endl;
 			}

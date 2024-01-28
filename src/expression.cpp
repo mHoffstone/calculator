@@ -12,11 +12,11 @@ std::vector<Expression*> Expression::allExpressions;
 
 enum Type{T_NONE, T_NUMBER, T_OPERATOR, T_BRACKET, T_VARFUNC, T_VARIABLE, T_FUNCTION};
 
-struct primfunc{
+struct prefunc{
 	std::string name;
 	numtype (*f)(numtype);
 };
-static const primfunc primfuncs[]{
+static const prefunc prefuncs[]{
 	{"sqrt", std::sqrt},
 	{"sin", std::sin},
 	{"cos", std::cos},
@@ -37,7 +37,9 @@ static const prevar prevars[]{
 	{"pi", 3.14159265359},
 };
 
-Expression::Expression(int t, bool safe = false){
+static int getPriority(Expression* o);
+
+Expression::Expression(ExpressionType t, bool safe = false){
 	type = t;
 	if(!safe) allExpressions.push_back(this);
 }
@@ -72,6 +74,10 @@ void Expression::clean(){
 	init();
 }
 
+void Expression::cloneFrom(Expression* e){
+	if(e->hasValue()) setValue(e->getValue());
+}
+
 Variable::Variable() : Expression(ET_VARIABLE){
 	//ctor
 }
@@ -88,8 +94,8 @@ void Variable::evaluate(bool simplify){
 		return;
 	}
 	
-	if(Expression::variables.find(name) != Expression::variables.end()){
-		Expression* e = Expression::variables[name];
+	if(Expression::hasVariable(name)){
+		Expression* e = Expression::getVariable(name);
 		e->evaluate(simplify);
 		if(e->hasValue()) setValue(e->getValue());
 		return;
@@ -100,10 +106,10 @@ void Variable::evaluate(bool simplify){
 
 std::string Variable::toString(){
 	if(hasValue()) return Expression::toString();
-	else if(Expression::variables.find(name) == Expression::variables.end()){
+	else if(!Expression::hasVariable(name)){
 		return name;
 	}
-	else return Expression::variables[name]->toString();
+	else return Expression::getVariable(name)->toString();
 }
 int Variable::getBuiltInVariableIndex(const std::string& name){
 	int n = sizeof(prevars) / sizeof(prevar);
@@ -114,6 +120,16 @@ int Variable::getBuiltInVariableIndex(const std::string& name){
 }
 numtype Variable::getBuiltInVariable(int index){
 	return prevars[index].v;
+}
+Expression* Variable::clone(){
+	if(Expression::hasVariable(name)){
+		return Expression::getVariable(name)->clone();
+	}
+	else{
+		Variable* v = new Variable(name);
+		v->cloneFrom(this);
+		return v;
+	}
 }
 
 Constant::Constant() : Expression(ET_CONSTANT){
@@ -129,6 +145,10 @@ Constant::~Constant(){
 std::string Constant::toString(){
 	return Expression::toString();
 }
+Expression* Constant::clone(){
+	Constant* c = new Constant(getValue());
+	return c;
+}
 
 FunctionArgument::FunctionArgument() : Expression(ET_FUNCTION_ARGUMENT){
 	
@@ -139,8 +159,13 @@ FunctionArgument::~FunctionArgument(){
 void FunctionArgument::evaluate(bool simplify){
 	if(e == nullptr) return;
 	e->evaluate(simplify);
-	bValue = e->hasValue();
-	value = e->getValue();
+	if(e->hasValue()) setValue(e->getValue());
+}
+Expression* FunctionArgument::clone(){
+	FunctionArgument* fa = new FunctionArgument;
+	fa->e = e;
+	fa->cloneFrom(this);
+	return fa;
 }
 
 Function::Function(std::string name) : Expression(ET_FUNCTION), name(name){
@@ -151,11 +176,18 @@ Function::~Function(){
 	
 }
 void Function::evaluate(bool simplify){
-	int index = getPrimfuncIndex(name);
+	if(arg == nullptr){
+		if(!simplify) throw expression_exception("Function argument was not defined");
+		return;
+	}
+	
+	int index = getPrefuncIndex(name);
 	if(index > -1){
 		arg->evaluate(simplify);
-		numtype v = arg->getValue();
-		setValue(getPrimfuncVal(index, v));
+		if(arg->hasValue()){
+			numtype v = arg->getValue();
+			setValue(getPrefuncVal(index, v));
+		}
 		return;
 	}
 	
@@ -163,7 +195,7 @@ void Function::evaluate(bool simplify){
 	if(f != Expression::functions.end()){
 		f->second.second->e = arg;
 		f->second.first->evaluate(simplify);
-		setValue(f->second.first->getValue());
+		if(f->second.first->hasValue()) setValue(f->second.first->getValue());
 		return;
 	}
 
@@ -177,29 +209,33 @@ std::string Function::toString(){
 	if(hasValue()) return Expression::toString();
 	return name + std::string("(") + arg->toString() + std::string(")");
 }
-int Function::getPrimfuncIndex(const std::string& name){
-	int n = sizeof(primfuncs) / sizeof(primfunc);
+int Function::getPrefuncIndex(const std::string& name){
+	int n = sizeof(prefuncs) / sizeof(prefunc);
 	for(int i = 0; i < n; i++){
-		if(primfuncs[i].name == name) return i;
+		if(prefuncs[i].name == name) return i;
 	}
 	return -1;
 }
-numtype Function::getPrimfuncVal(int index, numtype v){
-	return primfuncs[index].f(v);
+numtype Function::getPrefuncVal(int index, numtype v){
+	return prefuncs[index].f(v);
+}
+Expression* Function::clone(){
+	Function* f = new Function(name);
+	f->cloneFrom(this);
+	f->arg = arg;
+	f->bDefined = bDefined;
+	return f;
 }
 
-template <int opcount>
-Operation<opcount>::Operation(int t) : Expression(ET_OPERATION){
+Operation::Operation(OperationType t) : Expression(ET_OPERATION){
 	opType = t;
 	operands[0] = nullptr;
 	operands[1] = nullptr;
 }
-template <int opcount>
-Operation<opcount>::~Operation(){
+Operation::~Operation(){
 
 }
-template <int opcount>
-std::string Operation<opcount>::toString(){
+std::string Operation::toString(){
 	if(hasValue()) return Expression::toString();
 	try{
 		std::string opname;
@@ -234,10 +270,19 @@ std::string Operation<opcount>::toString(){
 		bool brackets[2]{false, false};
 		int tprio = getPriority(this);
 		for(int i = 0; i < 2; i++){
-			int prio = getPriority(operands[i]);
+			Expression* next = operands[i];
+			while(next->getType() == ET_VARIABLE){
+				Variable* v = (Variable*)next;
+				if(Expression::hasVariable(v->getName())){
+					next = Expression::getVariable(v->getName());
+				}
+				else break;
+			}
+			int prio = getPriority(next);
 			if(prio == -1) continue;
-			int tot = ((Operation<2>*)operands[i])->getOperationType();
-			if(prio < tprio || (prio == tprio && (tot == OP_SUB || tot == OP_DIV || tot == OP_MOD))) brackets[i] = true;
+			//int tot = ((Operation*)operands[i])->getOperationType();
+			int tot = getOperationType();
+			if(prio < tprio || (prio == tprio && i == 1 && (tot == OP_SUB || tot == OP_DIV || tot == OP_MOD))) brackets[i] = true;
 		}
 		if(operands[0]->hasValue()) brackets[0] = false;
 		if(operands[1]->hasValue()) brackets[1] = false;
@@ -261,8 +306,33 @@ std::string Operation<opcount>::toString(){
 		return "?";
 	}
 }
+Expression* Operation::clone(){
+	Operation* o;
+	switch(opType){
+		case OP_NONE:
+			o = new Operation(OP_NONE); break;
+		case OP_ADD:
+			o = new Addition; break;
+		case OP_SUB:
+			o = new Subtraction; break;
+		case OP_MUL:
+			o = new Multiplication; break;
+		case OP_DIV:
+			o = new Division; break;
+		case OP_MOD:
+			o = new Modulo; break;
+		case OP_POW:
+			o = new Power; break;
+		case OP_ASSIGN:
+			o = new Assign; break;
+	}
+	o->cloneFrom(this);
+	o->operands[0] = operands[0]->clone();
+	o->operands[1] = operands[1]->clone();
+	return o;
+}
 
-Addition::Addition() : Operation<2>(OP_ADD){
+Addition::Addition() : Operation(OP_ADD){
 	//ctor
 }
 Addition::~Addition(){
@@ -275,9 +345,58 @@ void Addition::evaluate(bool simplify){
 	if(bValue){
 		value = operands[0]->getValue() + operands[1]->getValue();
 	}
+	/*if(!hasValue()){
+		std::vector<Expression*> stack;
+		stack.push_back(operands[0]);
+		stack.push_back(operands[1]);
+		std::vector<Expression*> sumExp;
+		numtype sum = 0.0;
+		while(!stack.empty()){
+			Expression* e = stack.back();
+			stack.erase(stack.end()-1);
+			if(e->hasValue()) sum += e->getValue();
+			else if(e->getType() == ET_OPERATION){
+				if(((Operation*)e)->getOperationType() == OP_ADD){
+					Addition* a = (Addition*)e;
+					stack.push_back(a->operands[0]);
+					stack.push_back(a->operands[1]);
+				}
+				else{
+					sumExp.push_back(e);
+				}
+			}
+			else if(e->getType() == ET_VARIABLE){
+				if(Expression::hasVariable(((Variable*)e)->getName())){
+					stack.push_back(Expression::getVariable(((Variable*)e)->getName()));
+				}
+				else{
+					sumExp.push_back(e);
+				}
+			}
+			else{
+				sumExp.push_back(e);
+			}
+		}
+		if(sumExp.size() == 1){
+			operands[0] = new Constant(sum);
+			operands[1] = sumExp[0];
+		}
+		if(sumExp.size() > 1){
+			Addition* base = this;
+			Addition* top = base;
+			base->operands[0] = new Constant(sum);
+			for(int i = 0; i < (int)sumExp.size()-1; i++){
+				Addition* a = new Addition;
+				a->operands[0] = sumExp[i];
+				top->operands[1] = a;
+				top = a;
+			}
+			top->operands[1] = sumExp.back();
+		}
+	}*/
 }
 
-Subtraction::Subtraction() : Operation<2>(OP_SUB){
+Subtraction::Subtraction() : Operation(OP_SUB){
 	//ctor
 }
 Subtraction::~Subtraction(){
@@ -292,7 +411,7 @@ void Subtraction::evaluate(bool simplify){
 	}
 }
 
-Multiplication::Multiplication() : Operation<2>(OP_MUL){
+Multiplication::Multiplication() : Operation(OP_MUL){
 	//ctor
 }
 Multiplication::~Multiplication(){
@@ -307,7 +426,7 @@ void Multiplication::evaluate(bool simplify){
 	}
 }
 
-Division::Division() : Operation<2>(OP_DIV){
+Division::Division() : Operation(OP_DIV){
 	//ctor
 }
 Division::~Division(){
@@ -323,7 +442,7 @@ void Division::evaluate(bool simplify){
 }
 
 
-Modulo::Modulo() : Operation<2>(OP_MOD){
+Modulo::Modulo() : Operation(OP_MOD){
 	//ctor
 }
 Modulo::~Modulo(){
@@ -339,7 +458,7 @@ void Modulo::evaluate(bool simplify){
 }
 
 
-Power::Power() : Operation<2>(OP_POW){
+Power::Power() : Operation(OP_POW){
 	//ctor
 }
 Power::~Power(){
@@ -354,7 +473,7 @@ void Power::evaluate(bool simplify){
 	}
 }
 
-Assign::Assign() : Operation<2>(OP_ASSIGN){
+Assign::Assign() : Operation(OP_ASSIGN){
 	//ctor
 }
 Assign::~Assign(){
@@ -369,7 +488,7 @@ void Assign::replaceVariable(Expression** e, FunctionArgument* fa, const std::st
 	}
 	
 	else if((*e)->getType() == ET_OPERATION){
-		Operation<2>* o = ((Operation<2>*)*e);
+		Operation* o = ((Operation*)*e);
 		replaceVariable(&o->operands[0], fa, argName);
 		replaceVariable(&o->operands[1], fa, argName);
 	}
@@ -393,7 +512,7 @@ void Assign::evaluate(bool simplify){
 	checkList.push_back(operands[1]);
 	while(!checkList.empty()){
 		if(checkList.back()->getType() == ET_OPERATION){
-			Operation<2>* o = (Operation<2>*)checkList.at(checkList.size()-1);
+			Operation* o = (Operation*)checkList.at(checkList.size()-1);
 			checkList.erase(checkList.end()-1);
 			checkList.push_back(o->operands[0]);
 			checkList.push_back(o->operands[1]);
@@ -418,6 +537,13 @@ void Assign::evaluate(bool simplify){
 				if(!simplify) throw expression_exception("Cannot assign value that depends on itself");
 				return;
 			}
+			
+			auto g = Expression::functions.find(f->getName());
+			Expression* ge = nullptr;
+			if(g != Expression::functions.end()){
+				ge = g->second.first;
+			}
+			if(ge != nullptr) checkList.push_back(ge);
 		}
 		else{
 			checkList.erase(checkList.end()-1);
@@ -440,8 +566,7 @@ void Assign::evaluate(bool simplify){
 		}
 		
 		//Expression::variables[((Variable*)operands[0])->name] = operands[1];
-		auto it = Expression::variables.find(v->name);
-		if(it == Expression::variables.end()){
+		if(!Expression::hasVariable(v->name)){
 			if(v->name == "y"){
 				throw expression_exception("Trying to assign y");
 			}
@@ -475,7 +600,7 @@ void Assign::evaluate(bool simplify){
 			if(f->arg->getType() == ET_VARIABLE){
 				argName = ((Variable*)f->arg)->getName();
 				
-				if(Function::getPrimfuncIndex(f->name) > -1){
+				if(Function::getPrefuncIndex(f->name) > -1){
 					if(!simplify) throw expression_exception(f->name + " is a built-in function and cannot be reassigned");
 					return;
 				}
@@ -547,9 +672,9 @@ std::string Expression::toString(numtype v){
 	return str;
 }
 
-int getPriority(Expression* o){
+static int getPriority(Expression* o){
 	if(o->getType() != ET_OPERATION) return -1;
-	switch(((Operation<2>*)o)->getOperationType()){
+	switch(((Operation*)o)->getOperationType()){
 		case OP_ASSIGN:
 			return 0;
 		case OP_ADD:
@@ -561,8 +686,10 @@ int getPriority(Expression* o){
 			return 2;
 		case OP_POW:
 			return 3;
+		case OP_NONE:
+		default:
+			return -1;
 	}
-	return -1;
 }
 
 Expression* Expression::toExpression(const std::pair<int, std::string>& p){
@@ -588,7 +715,7 @@ Expression* Expression::toExpression(const std::pair<int, std::string>& p){
 		else if(p.second == "=") return new Assign;
 		else throw expression_exception(p.second + ": No such operation");
 	}
-	else throw expression_exception(p.second + ": not convertable to expression");
+	throw expression_exception(p.second + ": not convertable to expression");
 }
 
 static Expression* evalVec(const std::vector<Expression*>& expressions, int start, int last){
@@ -620,7 +747,7 @@ static Expression* evalVec(const std::vector<Expression*>& expressions, int star
 		}
 		else throw expression_exception("Missing right operand");
 		
-		Operation<2>* op = (Operation<2>*)expressions[i];
+		Operation* op = (Operation*)expressions[i];
 		
 		//std::cout << ls->m_value << expressions[i] << rs->m_value << std::endl;
 		op->operands[0] = ls;
@@ -757,7 +884,8 @@ Expression* Expression::getExpression(const std::string& str){
 	if(str.empty()) throw expression_exception("Input was empty");
 	
 	std::vector<std::pair<int, std::string>> parts = toVec(str);
-
+	if(parts.size() == 0) throw expression_exception("Input was malformated");
+	
 	std::vector<Expression*> expressions = convertVec(parts);
 	
 	Expression* e = evalVec(expressions, 1, (int)expressions.size());

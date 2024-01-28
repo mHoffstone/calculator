@@ -49,13 +49,24 @@ void GraphCanvas::OnPaint(wxPaintEvent& event){
 	
 	pen.SetColour(wxColor(255, 255, 255));
 	dc.SetPen(pen);
+	dc.SetBrush(brush);
+	dc.SetFont(font);
+	
+	dc.DrawRectangle(0, 0, size.x, size.y);
+	
+	//pen.SetColour(wxColor(0, 0, 0));
+	//dc.SetPen(pen);
+
+/*	
+	pen.SetColour(wxColor(255, 255, 255));
+	dc.SetPen(pen);
 	dc.DrawRectangle(0, 0, size.x, size.y);
 	
 	pen.SetColour(wxColor(0, 0, 0));
 	dc.SetPen(pen);
 	dc.SetBrush(brush);
 	dc.SetFont(font);
-	
+*/
 	//dc.DrawText(wxT("Hello"), wxPoint(size.x/2, size.y/2));
 	
 	{
@@ -64,12 +75,16 @@ void GraphCanvas::OnPaint(wxPaintEvent& event){
 		vec2d next = toScreen({1.0 * m, 1.0 * m});
 		vec2d delta = next - start;
 		
+		pen.SetColour(wxColor(128, 128, 128));
+		dc.SetPen(pen);
 		dc.DrawLine(wxPoint(0, start.y), wxPoint(size.x, start.y));
 		dc.DrawLine(wxPoint(start.x, 0), wxPoint(start.x, size.y));
 		
 		int p = -std::log10(m);
 		if(p < 0) p = 0;
-	
+		
+		pen.SetColour(wxColor(0, 0, 0));
+		dc.SetPen(pen);
 		for(int i = -start.x/delta.x; i < (size.x-start.x)/delta.x; i++){
 			dc.DrawText(toString(i * m, p), start + vec2d{delta.x * i, 0.0});
 		}
@@ -81,9 +96,9 @@ void GraphCanvas::OnPaint(wxPaintEvent& event){
 	int onlyDrawFunctionIndex = 0;
 	for(int i = 0; i < (int)inputs.size(); i++){
 		Expression* e = expressions.at(i);
-		if(e != nullptr && e->getType() == ET_OPERATION && ((Operation<2>*)e)->getOperationType() == OP_ASSIGN){
-			if(((Operation<2>*)e)->operands[0]->getType() == ET_FUNCTION){
-				Function* f = (Function*)(((Operation<2>*)e)->operands[0]);
+		if(e != nullptr && e->getType() == ET_OPERATION && ((Operation*)e)->getOperationType() == OP_ASSIGN){
+			if(((Operation*)e)->operands[0]->getType() == ET_FUNCTION){
+				Function* f = (Function*)(((Operation*)e)->operands[0]);
 				bool isDrawOnly = false;
 				std::pair<Expression*, FunctionArgument*> p;
 				if(f->getName() == "y"){
@@ -132,14 +147,14 @@ void GraphCanvas::OnPaint(wxPaintEvent& event){
 					outputs.at(i) = err.what();
 				}
 			}
-			else if(((Operation<2>*)e)->operands[0]->getType() == ET_VARIABLE){
+			else if(((Operation*)e)->operands[0]->getType() == ET_VARIABLE){
 				try{
-					((Operation<2>*)e)->operands[0]->evaluate(false);
-					outputs.at(i) = Expression::toString(((Operation<2>*)e)->operands[0]->getValue());
+					((Operation*)e)->operands[0]->evaluate(false);
+					outputs.at(i) = Expression::toString(((Operation*)e)->operands[0]->getValue());
 				}
 				catch(const expression_exception& ex){
 					if(ex.get_type() == expression_exception::T_NO_VALUE){
-						outputs.at(i) = ((Operation<2>*)e)->operands[0]->toString();
+						outputs.at(i) = ((Operation*)e)->operands[0]->toString();
 					}
 					else outputs.at(i) = ex.what();
 				}
@@ -176,13 +191,7 @@ void GraphCanvas::set(int i, const std::string& str){
 		e = Expression::getExpression(str);
 		e->evaluate(false);
 		expressions.at(i) = e;
-		/*if(e->hasValue()){
-			outputs.at(i) = Expression::toString(e->getValue());
-		}
-		else{*/
-			//outputs.at(i) = "";
-			outputs.at(i) = e->toString();
-		//}
+		outputs.at(i) = e->toString();
 	}
 	catch(const expression_exception& err){
 		if(err.get_type() == expression_exception::T_NO_VALUE){

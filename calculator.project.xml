@@ -88,9 +88,34 @@
     <Configuration Name="Release" CompilerType="MinGW 64bit ( MSYS2 64bit )" DebuggerType="GNU gdb debugger" Type="Executable" BuildCmpWithGlobalSettings="append" BuildLnkWithGlobalSettings="append" BuildResWithGlobalSettings="append">
       <Compiler Options="-O2;-Wall" C_Options="-O2;-Wall" Assembler="" Required="yes" PreCompiledHeader="" PCHInCommandLine="no" PCHFlags="" PCHFlagsPolicy="0">
         <IncludePath Value="."/>
+        <IncludePath Value="include"/>
         <Preprocessor Value="NDEBUG"/>
       </Compiler>
-      <Linker Options="" Required="yes"/>
+      <Linker Options="res\resource.res;-mwindows;-static;-static-libgcc;-static-libstdc++" Required="yes">
+        <LibraryPath Value="lib"/>
+        <Library Value="libwxbase31u.a"/>
+        <Library Value="libwxbase31u_net.a"/>
+        <Library Value="libwxbase31u_xml.a"/>
+        <Library Value="libwxexpat.a"/>
+        <Library Value="libwxjpeg.a"/>
+        <Library Value="libwxmsw31u_adv.a"/>
+        <Library Value="libwxmsw31u_aui.a"/>
+        <Library Value="libwxmsw31u_core.a"/>
+        <Library Value="libwxmsw31u_gl.a"/>
+        <Library Value="libwxmsw31u_html.a"/>
+        <Library Value="libwxmsw31u_media.a"/>
+        <Library Value="libwxmsw31u_propgrid.a"/>
+        <Library Value="libwxmsw31u_ribbon.a"/>
+        <Library Value="libwxmsw31u_richtext.a"/>
+        <Library Value="libwxmsw31u_stc.a"/>
+        <Library Value="libwxmsw31u_webview.a"/>
+        <Library Value="libwxmsw31u_xrc.a"/>
+        <Library Value="libwxpng.a"/>
+        <Library Value="libwxregexu.a"/>
+        <Library Value="libwxscintilla.a"/>
+        <Library Value="libwxtiff.a"/>
+        <Library Value="libwxzlib.a"/>
+      </Linker>
       <ResourceCompiler Options="" Required="no"/>
       <General OutputFile="$(ProjectName)" IntermediateDirectory="" Command="$(WorkspacePath)/build-$(WorkspaceConfiguration)/bin/$(OutputFile)" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(WorkspacePath)/build-$(WorkspaceConfiguration)/lib" PauseExecWhenProcTerminates="yes" IsGUIProgram="no" IsEnabled="yes"/>
       <BuildSystem Name="CodeLite Makefile Generator"/>

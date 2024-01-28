@@ -22,7 +22,7 @@ class FunctionArgument;
 
 class Expression{
 	protected:
-		Expression(int t, bool safe);
+		Expression(ExpressionType t, bool safe);
 		void setValue(numtype v){value = v; bValue = true;}
 	public:
 		virtual ~Expression();
@@ -41,13 +41,19 @@ class Expression{
 			else return "#";
 		}
 		
+		static bool hasVariable(const std::string& name){
+			return variables.find(name) != variables.end();
+		}
 		static Expression* getVariable(const std::string& name){
 			return variables[name];
 		}
 		
-		int getType(){
+		ExpressionType getType(){
 			return type;
 		}
+		
+		virtual Expression* clone(){return nullptr;}
+		void cloneFrom(Expression* e);
 		
 		static void init();
 		static void clean();
@@ -62,7 +68,7 @@ class Expression{
 	protected:
 		bool bValue = false;
 		numtype value = -1.0;
-		int type;
+		ExpressionType type;
 		static std::map<std::string, Expression*> variables;
 		static std::map<std::string, std::pair<Expression*, FunctionArgument*>> functions;
 		static std::vector<std::pair<Expression*, FunctionArgument*>> drawFunctions;
@@ -83,6 +89,8 @@ class Variable : public Expression{
 		std::string getName(){
 			return name;
 		}
+		
+		virtual Expression* clone() override;
 		
 		static int getBuiltInVariableIndex(const std::string& name);
 		static numtype getBuiltInVariable(int index);
@@ -108,6 +116,8 @@ class Constant : public Expression{
 		void resetValue(){
 			bValue = false;
 		}
+		
+		virtual Expression* clone() override;
 };
 
 class FunctionArgument : public Expression{
@@ -122,7 +132,10 @@ class FunctionArgument : public Expression{
 		std::string toString() override{
 			return "x";
 		}
+		
+		virtual Expression* clone() override;
 };
+
 class Function : public Expression{
 	public:
 		Function(std::string name);
@@ -139,8 +152,10 @@ class Function : public Expression{
 		void evaluate(bool simplify) override;
 		virtual std::string toString() override;
 		
-		static int getPrimfuncIndex(const std::string& name);
-		static numtype getPrimfuncVal(int index, numtype v);
+		virtual Expression* clone() override;
+		
+		static int getPrefuncIndex(const std::string& name);
+		static numtype getPrefuncVal(int index, numtype v);
 		
 		friend class Assign;
 		
@@ -150,24 +165,26 @@ class Function : public Expression{
 		bool bDefined = false;
 };
 
-template <int opcount>
 class Operation : public Expression{
 	public:
-		Operation(int t);
+		Operation(OperationType t);
 		virtual ~Operation();
 		
 		virtual std::string toString() override;
 		
-		std::array<Expression*, opcount> operands;
+		std::array<Expression*, 2> operands;
 		
-		int getOperationType(){
+		OperationType getOperationType(){
 			return opType;
 		}
+		
+		virtual Expression* clone() override;
+		
 	private:
-		int opType;
+		OperationType opType;
 };
 
-class Addition : public Operation<2>{
+class Addition : public Operation{
 	public:
 		Addition();
 		virtual ~Addition();
@@ -175,7 +192,7 @@ class Addition : public Operation<2>{
 		void evaluate(bool simplify) override;
 };
 
-class Subtraction : public Operation<2>{
+class Subtraction : public Operation{
 	public:
 		Subtraction();
 		virtual ~Subtraction();
@@ -183,7 +200,7 @@ class Subtraction : public Operation<2>{
 		void evaluate(bool simplify) override;
 };
 
-class Multiplication : public Operation<2>{
+class Multiplication : public Operation{
 	public:
 		Multiplication();
 		virtual ~Multiplication();
@@ -191,7 +208,7 @@ class Multiplication : public Operation<2>{
 		void evaluate(bool simplify) override;
 };
 
-class Division : public Operation<2>{
+class Division : public Operation{
 	public:
 		Division();
 		virtual ~Division();
@@ -199,7 +216,7 @@ class Division : public Operation<2>{
 		void evaluate(bool simplify) override;
 };
 
-class Modulo : public Operation<2>{
+class Modulo : public Operation{
 	public:
 		Modulo();
 		virtual ~Modulo();
@@ -207,7 +224,7 @@ class Modulo : public Operation<2>{
 		void evaluate(bool simplify) override;
 };
 
-class Power : public Operation<2>{
+class Power : public Operation{
 	public:
 		Power();
 		virtual ~Power();
@@ -215,7 +232,7 @@ class Power : public Operation<2>{
 		void evaluate(bool simplify) override;
 };
 
-class Assign : public Operation<2>{
+class Assign : public Operation{
 	public:
 		Assign();
 		virtual ~Assign();

@@ -18,7 +18,7 @@ class ScrollPane : public wxScrolledWindow{
 			this->SetSizer(sizer);
 			this->SetScrollRate(5, 5);
 		}
-		
+
 		wxBoxSizer* sizer;
 };
 
@@ -58,6 +58,7 @@ bool MainApp::OnInit(){
 	wxLog::SetActiveTarget(logger);
 
 	MainFrame *frame = new MainFrame();
+	frame->SetIcon( wxICON(IDI_ICON1) );
 	frame->Show(true);
 	return true;
 }
@@ -80,22 +81,22 @@ MainFrame::MainFrame() : wxFrame(NULL, wxID_ANY, "Calculator", wxDefaultPosition
 	SetStatusText("Welcome to wxWidgets!");*/
 
 	SetThemeEnabled(true);
-	
+
 	splitter = new wxSplitterWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_BORDER | wxSP_LIVE_UPDATE);
 	scrollPane = new ScrollPane(splitter, wxID_ANY);
 	canvas = new GraphCanvas(splitter, wxID_ANY, wxDefaultPosition, wxSize(0, 0));
-	
+
 	addTextController();
-	
+
 	splitter->SetMinimumPaneSize(200);
 	splitter->SplitVertically(scrollPane, canvas);
 	//splitter->Fit();
-	
+
 	//Fit();
 	SetSize(900, 600);
 	splitter->SetSashPosition(300);
-	
-	
+
+
 	Bind(wxEVT_MENU, &MainFrame::OnHello, this, ID::HELLO);
 	Bind(wxEVT_MENU, &MainFrame::OnAbout, this, wxID_ABOUT);
 	Bind(wxEVT_MENU, &MainFrame::OnExit, this, wxID_EXIT);
@@ -149,9 +150,9 @@ void MainFrame::OnText(wxCommandEvent& event){
 		deletePool.erase(deletePool.begin());
 		txtCtrl->Destroy();
 	}
-	
+
 	Expression::clean();
-	
+
 	for(int i = 0; i < (int)textControllers.size(); i++){
 		wxTextCtrl* txtCtrl = textControllers[i];
 		std::string text = txtCtrl->GetLineText(0).ToStdString();
@@ -171,7 +172,7 @@ void MainFrame::OnText(wxCommandEvent& event){
 }
 void MainFrame::OnKey(wxKeyEvent& event){
 	wxChar uc = event.GetUnicodeKey();
-	
+
 	int active = -1;
 	for(int i = 0; i < (int)textControllers.size(); i++){
 		if(textControllers[i]->HasFocus()){
@@ -183,7 +184,7 @@ void MainFrame::OnKey(wxKeyEvent& event){
 		std::cout << "No text controller was active!" << std::endl;
 		return;
 	}
-	
+
 	if(uc != WXK_NONE){
 		if(uc == WXK_RETURN){
 			addTextController(active+1);
@@ -196,7 +197,7 @@ void MainFrame::OnKey(wxKeyEvent& event){
 					if(active > 0) textControllers[active-1]->SetFocus();
 				}
 			}
-			
+
 			event.Skip();
 		}
 	}
@@ -212,6 +213,6 @@ void MainFrame::OnKey(wxKeyEvent& event){
 				event.Skip();
 		}
 	}
-	
+
 	canvas->Refresh();
 }

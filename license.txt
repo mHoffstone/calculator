@@ -1,0 +1,8 @@
+The program contains:
+
+headers and libraries from wxWidgets (https://www.wxwidgets.org/)
+and
+runtime libraries from GCC, the GNU Compiler Collection (https://gcc.gnu.org/)
+
+wxWidgets license: https://www.wxwidgets.org/about/licence/
+gcc license: https://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html

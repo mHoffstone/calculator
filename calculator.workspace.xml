@@ -3,7 +3,7 @@
   <Project Name="calculator" Path="calculator.project" Active="Yes"/>
   <Project Name="nogui" Path="nogui.project" Active="No"/>
   <BuildMatrix>
-    <WorkspaceConfiguration Name="Debug" Selected="yes">
+    <WorkspaceConfiguration Name="Debug" Selected="no">
       <Environment/>
       <Project Name="calculator" ConfigName="Debug"/>
       <Project Name="nogui" ConfigName="Debug"/>
